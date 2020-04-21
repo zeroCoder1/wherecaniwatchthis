@@ -1,0 +1,366 @@
+@import url('https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
+/* The Modal (background) */
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  padding-top: 100px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0, 0, 0);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Modal Content */
+
+.modal-content {
+  position: relative;
+  background-color: #fafafa;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #888;
+  width: 98%;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  -webkit-animation-name: animatetop;
+  -webkit-animation-duration: 0.4s;
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
+.modal-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 135px;
+  color: #212529;
+  position: relative;
+  text-align: left;
+  margin: auto 67px;
+  padding-top: 20px;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+
+.description {
+  font-family: 'Nunito', sans-serif;
+  letter-spacing: 1.1px;
+  font-size: 22px;
+  text-align: left;
+  margin: 20px 60px 60px 120px;
+  line-height: 1.5;
+  color: #2b2b2b;
+}
+
+.score-details {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 20px,
+}
+
+.container {
+  margin: 20px auto;
+  max-width: 500px;
+}
+
+/* Add Animation */
+
+@-webkit-keyframes animatetop {
+  from {
+    top: -300px;
+    opacity: 0
+  }
+  to {
+    top: 0;
+    opacity: 1
+  }
+}
+
+@keyframes animatetop {
+  from {
+    top: -300px;
+    opacity: 0
+  }
+  to {
+    top: 0;
+    opacity: 1
+  }
+}
+
+/* The Close Button */
+
+.close {
+  color: #292b29;
+  font-size: 30px;
+  font-weight: bold;
+  padding-left: 96.5%;
+  padding-top: 10px;
+  position: relative;
+}
+
+.close:hover, .close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-header {
+  background-color: #fafafa;
+  color: white;
+}
+
+.modal-body {
+  background-color: #fafafa;
+  color: white;
+}
+
+.modal-footer {
+  padding: 2px 16px;
+  color: white;
+}
+
+#image-rating {
+  position: relative;
+  z-index: 1;
+  border-radius: 0px;
+  padding-bottom: 5px;
+  background: #fafafa;
+  box-shadow: 0 24.6px 11.1px -21px rgba(0, 0, 0, 0.011), 0 44.2px 30.6px -21px rgba(0, 0, 0, 0.016), 0 65.3px 73.6px -21px rgba(0, 0, 0, 0.02), 0 143px 244px -21px rgba(0, 0, 0, 0.03);
+}
+
+#movie-rating {
+  font-family: 'Anton', sans-serif;
+  font-size: 16px;
+  ;
+  display: flex;
+  justify-content: space-evenly;
+  width: 20%;
+  text-align: right;
+}
+
+.crossfade>img {
+  width: 40%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  color: transparent;
+  /* opacity: 0; */
+  z-index: 0;
+  -webkit-backface-visibility: hidden;
+  -webkit-animation: imageAnimation 30s linear infinite 0s;
+  -moz-animation: imageAnimation 30s linear infinite 0s;
+  -o-animation: imageAnimation 30s linear infinite 0s;
+  -ms-animation: imageAnimation 30s linear infinite 0s;
+  animation: imageAnimation 30s linear infinite 0s;
+}
+
+#video {
+  height: auto;
+}
+
+.video-gallery {
+  margin: 0px;
+  padding-bottom: 25px;
+}
+
+.video-flex {
+  list-style: none;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-flow: row wrap;
+  justify-content: left;
+}
+
+.video-frame {
+  position: relative;
+  display: block;
+  margin-bottom: 5px;
+  padding: 30px;
+  text-align: left;
+  text-transform: uppercase;
+  -webkit-animation: fadeIn 0.5s linear;
+  animation: fadeIn 0.5s linear;
+  -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+  width: min-content;
+}
+
+.switch-toggle {
+  position: relative;
+  padding: 18px;
+}
+
+.switch-toggle input {
+  position: absolute;
+  opacity: 0;
+}
+
+.switch-toggle input+label {
+  padding: 12px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 15px;
+  color: #212529;
+  cursor: pointer;
+  -webkit-transform: scaleX(1);
+  -webkit-transform-origin: center;
+  transform: scaleX(1);
+  transform-origin: center;
+  -webkit-transition: all 0.3s ease-in-out 0s;
+  transition: all 0.3s ease-in-out 0s;
+}
+
+.switch-toggle input:checked+label {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: #F42711;
+  -webkit-transform: scaleX(1);
+  -webkit-transform-origin: center;
+  transform: scaleX(1);
+  transform-origin: center;
+  -webkit-transition: all 0.3s ease-in-out 0s;
+  transition: all 0.3s ease-in-out 0s;
+}
+
+.switch-container {
+  border-radius: 50px;
+  background: #ffffff;
+  box-shadow: 20px 20px 60px #d9d9d9, -20px -20px 60px #ffffff;
+  width: max-content;
+  margin: 50px 67px;
+  text-transform: uppercase;
+}
+
+.provider-icon {
+  margin: auto;
+  position: relative;
+  display: block;
+  margin-bottom: 5px;
+  padding: 30px;
+  text-align: left;
+  text-transform: uppercase;
+  animation: none;
+}
+
+#provider-list {
+  list-style: none;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-inline-flex;
+  display: inline-flex;
+  -webkit-flex-flow: row wrap;
+  justify-content: flex-start;
+}
+
+.channel-img {
+  height: 75px;
+  border-radius: 50%;
+}
+
+.modal-providers {
+  text-align: left;
+}
+
+/*
+.crossfade > img:nth-child(2)  {
+  -webkit-animation-delay: 6s;
+  -moz-animation-delay: 6s;
+  -o-animation-delay: 6s;
+  -ms-animation-delay: 6s;
+  animation-delay: 6s; 
+}
+.crossfade > img:nth-child(3) {
+  -webkit-animation-delay: 12s;
+  -moz-animation-delay: 12s;
+  -o-animation-delay: 12s;
+  -ms-animation-delay: 12s;
+  animation-delay: 12s; 
+}
+.crossfade > img:nth-child(4) {
+  -webkit-animation-delay: 18s;
+  -moz-animation-delay: 18s;
+  -o-animation-delay: 18s;
+  -ms-animation-delay: 18s;
+  animation-delay: 18s; 
+}
+.crossfade > img:nth-child(5) {
+  -webkit-animation-delay: 24s;
+  -moz-animation-delay: 24s;
+  -o-animation-delay: 24s;
+  -ms-animation-delay: 24s;
+  animation-delay: 24s; 
+}
+
+@-webkit-keyframes imageAnimation { 
+  0% { opacity: 0;
+  -webkit-animation-timing-function: ease-in; }
+  8% { opacity: 1;
+       -webkit-animation-timing-function: ease-out; }
+  17% { opacity: 1 }
+  25% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@-moz-keyframes imageAnimation { 
+  0% { opacity: 0;
+  -moz-animation-timing-function: ease-in; }
+  8% { opacity: 1;
+       -moz-animation-timing-function: ease-out; }
+  17% { opacity: 1 }
+  25% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@-o-keyframes imageAnimation { 
+  0% { opacity: 0;
+  -o-animation-timing-function: ease-in; }
+  8% { opacity: 1;
+       -o-animation-timing-function: ease-out; }
+  17% { opacity: 1 }
+  25% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@-ms-keyframes imageAnimation { 
+  0% { opacity: 0;
+  -ms-animation-timing-function: ease-in; }
+  8% { opacity: 1;
+       -ms-animation-timing-function: ease-out; }
+  17% { opacity: 1 }
+  25% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes imageAnimation { 
+  0% { opacity: 0;
+  animation-timing-function: ease-in; }
+  8% { opacity: 1;
+       animation-timing-function: ease-out; }
+  17% { opacity: 1 }
+  25% { opacity: 0 }
+  100% { opacity: 0 }
+}
+
+@keyframes fader {
+  from { opacity: 1.0; }
+  to   { opacity: 0.0; }
+} */
+
+div.gallery {
+  margin: 0px;
+  -webkit-animation: fadeIn 0.5s linear;
+  animation: fadeIn 0.5s linear;
+  -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+}
+
+div.gallery img {
+  width: 31%;
+}
+
+@media only screen and ( max-device-width: 414px) {}
