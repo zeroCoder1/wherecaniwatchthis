@@ -111,9 +111,11 @@ function showModal(details) {
   } else {
     // document.querySelector("#provider-list").innerHTML = "";
   }
+
 }
 
 function filterProvider(type) {
+  var images = "";
   for (var i = 0; i < offerObject.length; i++) {
     var offerObj = offerObject[i];
     if (offerObj.monetization_type === type) {
