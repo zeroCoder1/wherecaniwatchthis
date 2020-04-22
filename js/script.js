@@ -89,6 +89,7 @@ function showModal(details) {
 
   var channels = ""
   var img = ""
+  var filterIcon = ""
   if (details.hasOwnProperty('offers')) {
     for (var i = 0; i < details.offers.length; i++) {
       if (typeof details.offers[i] !== "undefined") {
@@ -106,11 +107,45 @@ function showModal(details) {
         }
       }
     }
+
     offerObject = details.offers;
-    //  document.querySelector("#provider-list").innerHTML = channels;
+    buildSwitch(offerObject);
   } else {
     // document.querySelector("#provider-list").innerHTML = "";
   }
+
+}
+
+function buildSwitch(offerObject) {
+
+  var buy = ""
+  var rent = ""
+  var free = ""
+  var stream = ""
+  var ads = ""
+
+  for (var i = 0; i < offerObject.length; i++) {
+    var offerObj = offerObject[i];
+
+    if (offerObj.monetization_type === "buy") {
+      buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
+    }
+    if (offerObj.monetization_type === "free") {
+      free = "<input id=" + "\"" + "free" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "free" + "\">" + "free" + "</label>"
+    }
+    if (offerObj.monetization_type === "rent") {
+      rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
+    }
+    if (offerObj.monetization_type === "ads") {
+      ads = "<input id=" + "\"" + "ads" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "ads" + "\">" + "ads" + "</label>"
+    }
+    if (offerObj.monetization_type === "flatrate") {
+      stream = "<input id=" + "\"" + "flatrate" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "flatrate" + "\">" + "stream" + "</label>"
+    }
+
+  }
+  document.querySelector(".switch-toggle").innerHTML = buy + rent + free + stream + ads;
+
 
 }
 
