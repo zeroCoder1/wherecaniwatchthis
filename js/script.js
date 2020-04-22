@@ -28,7 +28,7 @@ var HttpClient = function () {
 
 function fetchProviders() {
   var client = new HttpClient();
-  client.get("https://apis.justwatch.com/content/providers/locale/en_IN", function (response) {
+  client.get("https://cors-anywhere.herokuapp.com/https://apis.justwatch.com/content/providers/locale/en_IN", function (response) {
     var jsonObj = JSON.parse(response);
     providers = jsonObj;
   });
@@ -36,7 +36,7 @@ function fetchProviders() {
 
 function fetchMovieDetails(id) {
   var client = new HttpClient();
-  client.get("https://apis.justwatch.com/content/titles/" + id + "/locale/en_IN", function (response) {
+  client.get("https://cors-anywhere.herokuapp.com/https://apis.justwatch.com/content/titles/" + id + "/locale/en_IN", function (response) {
     var jsonObj = JSON.parse(response);
     showModal(jsonObj);
   });
@@ -199,7 +199,7 @@ $(document).ready(function () {
 
       var txt = $('input[name="search"]').val();
       $.ajax({
-        url: "https://apis.justwatch.com/content/titles/en_IN/popular",
+        url: "https://cors-anywhere.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
         type: "POST",
         data: JSON.stringify(
           {
