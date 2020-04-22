@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Nunito&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Condensed:400,700&display=swap');
 /* The Modal (background) */
 
 .modal {
@@ -45,12 +46,12 @@
 }
 
 .description {
-  font-family: 'Nunito', sans-serif;
+  font-family: 'Roboto Condensed', sans-serif;
   letter-spacing: 1.1px;
-  font-size: 22px;
+  font-size: 18px;
   text-align: left;
   margin: 20px 60px 60px 120px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: #2b2b2b;
 }
 
@@ -201,7 +202,8 @@
 
 .switch-toggle input+label {
   padding: 12px;
-  font-family: 'Open Sans', sans-serif;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 400;
   font-size: 15px;
   color: #212529;
   cursor: pointer;
@@ -214,10 +216,10 @@
 }
 
 .switch-toggle input:checked+label {
-  font-family: 'Open Sans', sans-serif;
-  font-size: 20px;
-  font-weight: bold;
-  color: #F42711;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #212529;
   -webkit-transform: scaleX(1);
   -webkit-transform-origin: center;
   transform: scaleX(1);
