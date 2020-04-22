@@ -36,6 +36,9 @@
     <!-- Modal content -->
     <div class="modal-content">
       <p><span class="close">&times;</span></p>
+      <div class="modal-header">
+        <h2 class="modal-title">Modal Header</h2>
+      </div>
       <div id="image-rating">
         <div class="crossfade"></div>
         <div id="movie-rating">
@@ -44,9 +47,7 @@
         </div>
       </div>
 
-      <div class="modal-header">
-        <h2 class="modal-title">Modal Header</h2>
-      </div>
+     
       <div class="modal-body">
         <p class="description">Some text in the Modal Body</p>
       </div>
@@ -56,6 +57,9 @@
 
           <input id="free" name="state-d" type="radio" onclick="filterProvider(this.id)">
           <label for="free">Free</label>
+
+          <input id="ads" name="state-d" type="radio" onclick="filterProvider(this.id)">
+          <label for="ads">Ads</label>
 
           <input id="flatrate" name="state-d" type="radio" onclick="filterProvider(this.id)">
           <label for="flatrate">Streams</label>

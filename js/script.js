@@ -48,9 +48,15 @@ function showModal(details) {
   document.querySelector(".description").innerHTML = details.short_description;
   var img = "";
   for (var i = 0; i < 3; i++) {
-    if (typeof details.backdrops[i] !== "undefined") {
-      var imageURL = details.backdrops[i].backdrop_url;
-      img += "<img class=\"backdrop\" src=" + "https://images.justwatch.com" + imageURL.replace("{profile}", "s1920>")
+    if (details.hasOwnProperty('backdrops')) {
+      if (typeof details.backdrops[i] !== "undefined") {
+        var imageURL = details.backdrops[i].backdrop_url;
+        img += "<img class=\"backdrop\" src=" + "https://images.justwatch.com" + imageURL.replace("{profile}", "s1920>")
+      } else {
+        img = ""
+      }
+    } else {
+      img = ""
     }
   }
 
@@ -61,14 +67,10 @@ function showModal(details) {
 
     if (detail.provider_type === "imdb:score") {
       document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + detail.value + "</span>";
-    } else {
-      document.querySelector(".imdb").innerHTML = "";
     }
 
     if (detail.provider_type === "tomato:meter") {
       document.querySelector(".rt").innerHTML = "Rotten Tomatoes" + "<br>" + "<span class= score-details>" + detail.value + "</span>";
-    } else {
-      document.querySelector(".rt").innerHTML = "";
     }
 
   }
@@ -109,12 +111,9 @@ function showModal(details) {
   } else {
     // document.querySelector("#provider-list").innerHTML = "";
   }
-
 }
 
 function filterProvider(type) {
-  var images = "";
-
   for (var i = 0; i < offerObject.length; i++) {
     var offerObj = offerObject[i];
     if (offerObj.monetization_type === type) {
