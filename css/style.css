@@ -51,12 +51,12 @@
  }
 
  ::-moz-selection {
-   color: white;
+   color: #fafafa;
    background: black;
  }
 
  ::selection {
-   color: white;
+   color: #fafafa;
    background: black;
  }
 

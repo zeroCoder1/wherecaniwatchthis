@@ -107,17 +107,17 @@
 
 .modal-header {
   background-color: #fafafa;
-  color: white;
+  color: #fafafa;
 }
 
 .modal-body {
   background-color: #fafafa;
-  color: white;
+  color: #fafafa;
 }
 
 .modal-footer {
   padding: 2px 16px;
-  color: white;
+  color: #fafafa;
 }
 
 #image-rating {
@@ -126,7 +126,7 @@
   border-radius: 0px;
   padding-bottom: 5px;
   background: #fafafa;
-  box-shadow: 0 24.6px 11.1px -21px rgba(0, 0, 0, 0.011), 0 44.2px 30.6px -21px rgba(0, 0, 0, 0.016), 0 65.3px 73.6px -21px rgba(0, 0, 0, 0.02), 0 143px 244px -21px rgba(0, 0, 0, 0.03);
+
 }
 
 #movie-rating {
