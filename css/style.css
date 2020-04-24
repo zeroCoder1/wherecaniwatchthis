@@ -57,6 +57,7 @@
 
  ::selection {
    color: #fafafa;
+
    background: black;
  }
 
@@ -245,7 +246,7 @@
 
    .headline {
     font-family: 'Anton', sans-serif;
-    font-size: 45px;
+    font-size: 35px;
     color: #212529;
     position: relative;
     text-align: center;
