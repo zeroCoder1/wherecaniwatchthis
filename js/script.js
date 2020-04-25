@@ -191,31 +191,39 @@ function PopulateDropDownList(data) {
 }
 
 $(document).ready(function () {
-  $("input").keypress(function () {
-    var keycode = (event.keyCode ? event.keyCode : event.which);
-    var data = [];
-
-    if (keycode == '13') {
-
-      var txt = $('input[name="search"]').val();
-      $.ajax({
-        url: "https://cors-anywhere.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
-        type: "POST",
-        data: JSON.stringify(
-          {
-            "page_size": 10,
-            "page": 1,
-            "query": txt,
-            "content_types": ["show", "movie"]
-          }
-        ),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (result) {
-          data = result.items
-          PopulateDropDownList(data);
-        }
-      });
+  $('input').on('keypress', function (e) {
+    if (e.which === 13) {
+      fetchMatchingCases();
     }
   });
+
+  $('input').focusout(function (e) {
+    fetchMatchingCases();
+  });
+
+
+  function fetchMatchingCases() {
+    var data = [];
+
+    var txt = $('input[name="search"]').val();
+    $.ajax({
+      url: "https://cors-anywhere.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
+      type: "POST",
+      data: JSON.stringify(
+        {
+          "page_size": 10,
+          "page": 1,
+          "query": txt,
+          "content_types": ["show", "movie"]
+        }
+      ),
+      contentType: "application/json; charset=utf-8",
+      dataType: "json",
+      success: function (result) {
+        data = result.items
+        PopulateDropDownList(data);
+      }
+    });
+  }
 });
+
