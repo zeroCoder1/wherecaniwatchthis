@@ -16,14 +16,14 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   <script src="js/script.js"></script>
   <!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-164558254-1"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-164558254-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
 
-  gtag('config', 'UA-164558254-1');
-</script>
+    gtag('config', 'UA-164558254-1');
+  </script>
 
 </head>
 
@@ -49,47 +49,27 @@
       <div class="modal-header">
         <h2 class="modal-title">Modal Header</h2>
       </div>
+
       <div id="image-rating">
-        <div class="crossfade"></div>
         <div id="movie-rating">
           <div class="imdb"></div>
           <div class="rt"></div>
         </div>
       </div>
 
-     
       <div class="modal-body">
         <p class="description">Some text in the Modal Body</p>
       </div>
 
       <div class="switch-container">
-        <div class="switch-toggle switch-3 switch-candy">
-
-          <!-- <input id="free" name="state-d" type="radio" onclick="filterProvider(this.id)">
-          <label for="free">Free</label>
-
-          <input id="ads" name="state-d" type="radio" onclick="filterProvider(this.id)">
-          <label for="ads">Ads</label>
-
-          <input id="flatrate" name="state-d" type="radio" onclick="filterProvider(this.id)">
-          <label for="flatrate">Streams</label>
-
-          <input id="rent" name="state-d" type="radio" onclick="filterProvider(this.id)">
-          <label for="rent">Rent</label>
-
-          <input id="buy" name="state-d" type="radio" onclick="filterProvider(this.id)">
-          <label for="buy">Buy</label> -->
-        </div>
+        <div class="switch-toggle switch-3 switch-candy"></div>
       </div>
-
-
 
       <div class="modal-providers">
-
-        <ul id="provider-list">
-
-        </ul>
+        <ul id="provider-list"></ul>
       </div>
+
+      <div class="crossfade"></div>
 
       <div class="modal-footer">
         <h3>Modal Footer</h3>
@@ -135,4 +115,5 @@
   }
 
 </script>
+
 </html>

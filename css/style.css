@@ -12,14 +12,14 @@
  body {
    text-align: center;
    align-items: center;
-   background-color: rgb(244, 243, 236);
+   background-color: #DEDDDD;
    margin: 0px;
  }
 
  .headline {
-   font-family: 'Anton', sans-serif;
+   font-family: 'Yanone Kaffeesatz', sans-serif;
    font-size: 55px;
-   color: #212529;
+   color: #d51c72;
    position: relative;
    text-align: center;
    text-transform: uppercase;
@@ -51,13 +51,12 @@
  }
 
  ::-moz-selection {
-   color: #fafafa;
+   color: #DEDDDD;
    background: black;
  }
 
  ::selection {
-   color: #fafafa;
-
+   color: #DEDDDD;
    background: black;
  }
 
@@ -72,33 +71,6 @@
    padding-right: 10%;
    padding-bottom: 1px;
    letter-spacing: 2px;
- }
-
- .dash {
-   font-family: 'Permanent Marker', cursive;
-   font-size: 45px;
-   text-align: left;
-   line-height: 1.5em;
-   padding-top: 10px;
-   padding-left: 10%;
-   padding-right: 10%;
-   padding-bottom: 1px;
-   letter-spacing: 2px;
-   color: rgb(181, 57, 82);
- }
-
- .credit {
-   font-family: 'Permanent Marker', cursive;
-   font-size: 25px;
-   letter-spacing: 1.2px;
-   text-align: right;
-   line-height: 1.5em;
-   padding-top: 10px;
-   padding-left: 10%;
-   padding-right: 10%;
-   padding-bottom: 1px;
-   letter-spacing: 2px;
-   color: rgb(181, 57, 82);
  }
 
  .link {
@@ -243,13 +215,12 @@
      justify-content: center;
      padding: 0%;
    }
-
    .headline {
-    font-family: 'Anton', sans-serif;
-    font-size: 35px;
-    color: #212529;
-    position: relative;
-    text-align: center;
-    text-transform: uppercase;
-  }
+     font-family: 'Anton', sans-serif;
+     font-size: 35px;
+     color: #d51c72;
+     position: relative;
+     text-align: center;
+     text-transform: uppercase;
+   }
  }
