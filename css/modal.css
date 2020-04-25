@@ -257,11 +257,20 @@
   display: inline-flex;
   -webkit-flex-flow: row wrap;
   justify-content: flex-start;
+  transition: all 0.3s;
+  opacity:1;
+  height: auto;
+
+}
+
+.pre-animation {
+  opacity:0 !important;
+  height: 0px !important;
 }
 
 .channel-img {
   height: 75px;
-  border-radius: 50%;
+  border-radius: 20%;
 }
 
 .modal-providers {

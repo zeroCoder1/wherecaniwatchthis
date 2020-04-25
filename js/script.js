@@ -1,6 +1,7 @@
 var providers = "";
 var offerObject = "";
 var objMatches = "";
+var mergedObj = "";
 
 $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
@@ -43,6 +44,10 @@ function fetchMovieDetails(id) {
 }
 
 function showModal(details) {
+  document.querySelector("#provider-list").innerHTML = "";
+  var container = document.querySelector("#provider-list");
+  container.classList.add('pre-animation');
+
   modal.style.display = "block";
   document.querySelector(".modal-title").innerHTML = details.title;
   document.querySelector(".description").innerHTML = details.short_description;
@@ -109,11 +114,37 @@ function showModal(details) {
     }
 
     offerObject = details.offers;
-    buildSwitch(offerObject);
+
+    offerObject.sort(function (x, y) {
+      if (x['id'] < y['id']) {
+        return -1;
+      }
+      if (x['id'] > y['id']) {
+        return 1;
+      }
+      return 0;
+    });
+
+    // iterate over each one, if this one has the same id as the previous one, accumulate
+    // else add to b
+    var lastId;
+    var b = [];
+    for (var i = 0; i < offerObject.length; i++) {
+      if (lastId == offerObject[i]['clearName']) {
+        b[b.length - 1]['provider_id'] += offerObject[i]['provider_id'];
+        b[b.length - 1]['presentation_type'] += "|" + offerObject[i]['presentation_type'];
+      } else {
+        b[b.length] = (offerObject[i]);
+        lastId = offerObject[i]['clearName'];
+      }
+    }
+
+    mergedObj = b;
+    console.log(mergedObj);
+    buildSwitch(mergedObj);
   } else {
     // document.querySelector("#provider-list").innerHTML = "";
   }
-
 }
 
 function buildSwitch(offerObject) {
@@ -126,15 +157,8 @@ function buildSwitch(offerObject) {
 
   for (var i = 0; i < offerObject.length; i++) {
     var offerObj = offerObject[i];
-
-    if (offerObj.monetization_type === "buy") {
-      buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
-    }
     if (offerObj.monetization_type === "free") {
       free = "<input id=" + "\"" + "free" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "free" + "\">" + "free" + "</label>"
-    }
-    if (offerObj.monetization_type === "rent") {
-      rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
     }
     if (offerObj.monetization_type === "ads") {
       ads = "<input id=" + "\"" + "ads" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "ads" + "\">" + "ads" + "</label>"
@@ -142,17 +166,22 @@ function buildSwitch(offerObject) {
     if (offerObj.monetization_type === "flatrate") {
       stream = "<input id=" + "\"" + "flatrate" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "flatrate" + "\">" + "stream" + "</label>"
     }
-
+    if (offerObj.monetization_type === "buy") {
+      buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
+    }
+    if (offerObj.monetization_type === "rent") {
+      rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
+    }
   }
-  document.querySelector(".switch-toggle").innerHTML = buy + rent + free + stream + ads;
+  document.querySelector(".switch-toggle").innerHTML =  free + ads + stream + buy + rent;
 
 
 }
 
 function filterProvider(type) {
   var images = "";
-  for (var i = 0; i < offerObject.length; i++) {
-    var offerObj = offerObject[i];
+  for (var i = 0; i < mergedObj.length; i++) {
+    var offerObj = mergedObj[i];
     if (offerObj.monetization_type === type) {
       if (offerObj.iconURL !== "undefined") {
         images += "<li class=provider-icon> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li>";
@@ -162,9 +191,12 @@ function filterProvider(type) {
     } else {
       document.querySelector("#provider-list").innerHTML = "";
     }
-    console.log(offerObj);
   }
   document.querySelector("#provider-list").innerHTML = images;
+
+  setTimeout(function(){
+    document.querySelector("#provider-list").classList.remove('pre-animation');
+},100)
 }
 
 function findObjectByKey(array, key, value) {
