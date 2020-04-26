@@ -278,7 +278,7 @@
 }
 
 div.gallery {
-  /* margin: 0px;
+  /* margin: 0px;s
   -webkit-animation: fadeIn 0.5s linear;
   animation: fadeIn 0.5s linear;
   -webkit-animation-fill-mode: both;
@@ -299,7 +299,8 @@ div.gallery img {
   display: inline-block;
 }
 
-@media only screen and ( max-device-width: 414px) {
+@media only screen and ( max-width: 768px) {
+
   .modal-title {
     font-family: 'Anton', sans-serif;
     font-size: 65px;
@@ -351,11 +352,11 @@ div.gallery img {
     display: inline-flex;
     -webkit-flex-flow: row wrap;
     justify-content: flex-start;
-    padding-left: 5px;
+    padding-left: 15px;
   }
   .channel-img {
     height: 50px;
-    border-radius: 50%;
+    border-radius: 20%;
   }
   .close {
     color: #292b29;

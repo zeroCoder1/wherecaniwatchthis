@@ -183,7 +183,7 @@
    }
  }
 
- @media only screen and ( max-device-width: 414px) {
+ @media only screen and ( max-width: 768px) {
    .main-content {
      font-size: 35px;
    }
