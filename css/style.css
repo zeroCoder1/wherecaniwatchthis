@@ -192,7 +192,7 @@
      font-size: 35px;
    }
    .link {
-     color: rgb(256, 256, 256);
+     color: rgb(20, 20, 20);
      text-decoration: none;
    }
    .footer {
@@ -200,7 +200,9 @@
      letter-spacing: 1.2px;
      font-size: 12px;
      color: rgb(256, 256, 256);
+     z-index: 1;
    }
+   
    li {
      position: relative;
      display: block;
