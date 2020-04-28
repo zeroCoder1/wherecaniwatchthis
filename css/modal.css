@@ -303,11 +303,11 @@ div.gallery img {
 
   .modal-title {
     font-family: 'Anton', sans-serif;
-    font-size: 65px;
+    font-size: 60px;
     color: #212529;
     position: relative;
     text-align: left;
-    margin: auto 67px;
+    margin: auto 48px;
     padding-top: 20px;
     text-transform: uppercase;
     line-height: 1.5;
@@ -327,7 +327,7 @@ div.gallery img {
     letter-spacing: 1.1px;
     font-size: 20px;
     text-align: left;
-    margin: 20px 60px 60px 120px;
+    margin: 20px 60px 60px 76px;
     line-height: 1.4;
     color: #2b2b2b;
     width: 60%;
@@ -341,7 +341,7 @@ div.gallery img {
     width: max-content;
     margin: 50px 20px;
     text-transform: uppercase;
-    margin: 50px 20px 50px;
+    margin: 20px 20px 30px;
   }
   #provider-list {
     list-style: none;
