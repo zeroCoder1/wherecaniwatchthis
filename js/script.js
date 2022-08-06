@@ -236,7 +236,7 @@ $(document).ready(function () {
   function fetchMatchingCases() {
     var txt = $('input[name="search"]').val();
     var client = new HttpClient();
-    client.get("https://suprworks-wrapper-production.up.railway.app/movies?query=" + txt, function (response) {
+    client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/movies?query=" + txt, function (response) {
       var jsonObj = JSON.parse(response);
       data = jsonObj.items
       PopulateDropDownList(data);
