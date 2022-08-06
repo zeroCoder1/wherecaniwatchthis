@@ -9,7 +9,7 @@ $(document).ready(function () {
     var object = $(this).attr("data-object");
     var id = $(this).attr("data-id");
 
-    fetchMovieDetails(object + "/" + id);
+    fetchMovieDetails(id);
   });
 
 });
@@ -37,7 +37,7 @@ function fetchProviders() {
 
 function fetchMovieDetails(id) {
   var client = new HttpClient();
-  client.get("https://supervid.herokuapp.com/https://apis.justwatch.com/content/titles/" + id + "/locale/en_IN", function (response) {
+  client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/movies/" + id, function (response) {
     var jsonObj = JSON.parse(response);
     showModal(jsonObj);
   });
@@ -243,29 +243,6 @@ $(document).ready(function () {
     });
   }
 
-  // function fetchMatchingCases() {
-  //   var data = [];
-
-  //   var txt = $('input[name="search"]').val();
-  //   $.ajax({
-  //     url: "https://supervid.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
-  //     type: "POST",
-  //     data: JSON.stringify(
-  //       {
-  //         "page_size": 10,
-  //         "page": 1,
-  //         "query": txt,
-  //         "content_types": ["show", "movie"]
-  //       }
-  //     ),
-  //     contentType: "application/json; charset=utf-8",
-  //     dataType: "json",
-  //     success: function (result) {
-  //       data = result.items
-  //       PopulateDropDownList(data);
-  //     }
-  //   });
-  // }
 });
 
 
