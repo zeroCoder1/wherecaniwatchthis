@@ -29,7 +29,7 @@ var HttpClient = function () {
 
 function fetchProviders() {
   var client = new HttpClient();
-  client.get("https://supervid.herokuapp.com/https://apis.justwatch.com/content/providers/locale/en_IN", function (response) {
+  client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/providers", function (response) {
     var jsonObj = JSON.parse(response);
     providers = jsonObj;
   });
