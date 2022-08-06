@@ -29,7 +29,7 @@ var HttpClient = function () {
 
 function fetchProviders() {
   var client = new HttpClient();
-  client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/providers", function (response) {
+  client.get("https://s.prod.supr.ninja/en_IN/providers", function (response) {
     var jsonObj = JSON.parse(response);
     providers = jsonObj;
   });
@@ -37,7 +37,7 @@ function fetchProviders() {
 
 function fetchMovieDetails(id) {
   var client = new HttpClient();
-  client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/movies/" + id, function (response) {
+  client.get("https://s.prod.supr.ninja/en_IN/movies/" + id, function (response) {
     var jsonObj = JSON.parse(response);
     console.log(jsonObj);
     showModal(jsonObj);
@@ -57,7 +57,7 @@ function showModal(details) {
     if (details.hasOwnProperty('backdrops')) {
       if (typeof details.backdrops[i] !== "undefined") {
         var imageURL = details.backdrops[i].backdrop_url;
-        img += "<img class=\"backdrop\" src=" + "https://suprworks-wrapper-production.up.railway.app/images?url=" + imageURL.replace("{profile}", "s1920>")
+        img += "<img class=\"backdrop\" src=" + "https://s.prod.supr.ninja/images?url=" + imageURL.replace("{profile}", "s1920>")
       } else {
         img = ""
       }
@@ -103,7 +103,7 @@ function showModal(details) {
         objMatches = findObjectByKey(providers, 'id', offer.provider_id);
         if (objMatches !== null) {
           if (objMatches.icon_url !== null) {
-            details.offers[i].iconURL = "https://suprworks-wrapper-production.up.railway.app/images?url=" + objMatches.icon_url.replace("{profile}", "s100");
+            details.offers[i].iconURL = "https://s.prod.supr.ninja/images?url=" + objMatches.icon_url.replace("{profile}", "s100");
 
             if (objMatches.clear_name !== "undefined") {
               details.offers[i].clearName = objMatches.clear_name;
@@ -216,7 +216,7 @@ function PopulateDropDownList(data) {
     var option = $("<li />");
     var poster = this.poster;
     var posterURL = poster.replace("{profile}", "s332>");
-    option.html("<img class=thumbnail src=" + "https://suprworks-wrapper-production.up.railway.app/images?url=" + posterURL + "<p>" + this.title + " <br>" + "(" + this.original_release_year + ")" + "</p>");
+    option.html("<img class=thumbnail src=" + "https://s.prod.supr.ninja/images?url=" + posterURL + "<p>" + this.title + " <br>" + "(" + this.original_release_year + ")" + "</p>");
     option.attr('data-id', this.id);
     option.attr('data-object', this.object_type);
     ddlCustomers.append(option);
@@ -237,7 +237,7 @@ $(document).ready(function () {
   function fetchMatchingCases() {
     var txt = $('input[name="search"]').val();
     var client = new HttpClient();
-    client.get("https://suprworks-wrapper-production.up.railway.app/en_IN/movies?query=" + txt, function (response) {
+    client.get("https://s.prod.supr.ninja/en_IN/movies?query=" + txt, function (response) {
       var jsonObj = JSON.parse(response);
       data = jsonObj.items
       PopulateDropDownList(data);
