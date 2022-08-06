@@ -233,29 +233,39 @@ $(document).ready(function () {
     fetchMatchingCases();
   });
 
-
   function fetchMatchingCases() {
-    var data = [];
-
     var txt = $('input[name="search"]').val();
-    $.ajax({
-      url: "https://supervid.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
-      type: "POST",
-      data: JSON.stringify(
-        {
-          "page_size": 10,
-          "page": 1,
-          "query": txt,
-          "content_types": ["show", "movie"]
-        }
-      ),
-      contentType: "application/json; charset=utf-8",
-      dataType: "json",
-      success: function (result) {
-        data = result.items
-        PopulateDropDownList(data);
-      }
+    var client = new HttpClient();
+    client.get("https://suprworks-wrapper-production.up.railway.app/movies?query=" + txt, function (response) {
+      var jsonObj = JSON.parse(response);
+      data = jsonObj.items
+      PopulateDropDownList(data);
     });
   }
+
+  // function fetchMatchingCases() {
+  //   var data = [];
+
+  //   var txt = $('input[name="search"]').val();
+  //   $.ajax({
+  //     url: "https://supervid.herokuapp.com/https://apis.justwatch.com/content/titles/en_IN/popular",
+  //     type: "POST",
+  //     data: JSON.stringify(
+  //       {
+  //         "page_size": 10,
+  //         "page": 1,
+  //         "query": txt,
+  //         "content_types": ["show", "movie"]
+  //       }
+  //     ),
+  //     contentType: "application/json; charset=utf-8",
+  //     dataType: "json",
+  //     success: function (result) {
+  //       data = result.items
+  //       PopulateDropDownList(data);
+  //     }
+  //   });
+  // }
 });
+
 
