@@ -8,8 +8,9 @@ $(document).ready(function () {
 
     var object = $(this).attr("data-object");
     var id = $(this).attr("data-id");
+    var type = $(this).attr("data-object")
 
-    fetchMovieDetails(id);
+    fetchMovieDetails(type, id);
   });
 
 });
@@ -35,9 +36,9 @@ function fetchProviders() {
   });
 }
 
-function fetchMovieDetails(id) {
+function fetchMovieDetails(type, id) {
   var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/en_IN/movies/" + id, function (response) {
+  client.get("https://s.prod.supr.ninja/en_IN/" + type + "/" + id, function (response) {
     var jsonObj = JSON.parse(response);
     console.log(jsonObj);
     showModal(jsonObj);
