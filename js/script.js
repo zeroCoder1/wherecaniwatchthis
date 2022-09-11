@@ -37,10 +37,10 @@ function fetchProviders() {
 }
 
 function fetchMovieDetails(type, id) {
+  var jsonObj = ""
   var client = new HttpClient();
   client.get("https://s.prod.supr.ninja/en_IN/" + type + "/" + id, function (response) {
-    var jsonObj = JSON.parse(response);
-    console.log(jsonObj);
+    jsonObj = JSON.parse(response);
     showModal(jsonObj);
   });
 }
@@ -132,17 +132,15 @@ function showModal(details) {
     var lastId;
     var b = [];
     for (var i = 0; i < offerObject.length; i++) {
-      if (lastId == offerObject[i]['clearName']) {
+      if (lastId == offerObject[i]['provider_id']) {
         b[b.length - 1]['provider_id'] += offerObject[i]['provider_id'];
         b[b.length - 1]['presentation_type'] += "|" + offerObject[i]['presentation_type'];
       } else {
         b[b.length] = (offerObject[i]);
-        lastId = offerObject[i]['clearName'];
+        lastId = offerObject[i]['provider_id'];
       }
     }
-
     mergedObj = b;
-    console.log(mergedObj);
     buildSwitch(mergedObj);
   } else {
     // document.querySelector("#provider-list").innerHTML = "";
@@ -185,8 +183,8 @@ function filterProvider(type) {
   for (var i = 0; i < mergedObj.length; i++) {
     var offerObj = mergedObj[i];
     if (offerObj.monetization_type === type) {
-      if (offerObj.iconURL !== "undefined") {
-        images += "<li class=provider-icon> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li>";
+      if (offerObj.iconURL !== 'undefined') {
+        images += "<li class=provider-icon> <a href=" + offerObj.urls.standard_web + "> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li> </a>";
       } else {
         images = "";
       }
