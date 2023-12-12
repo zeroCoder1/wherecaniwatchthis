@@ -1,6 +1,7 @@
  @import url('https://fonts.googleapis.com/css?family=Open+Sans&display=swap');
  @import url('https://fonts.googleapis.com/css2?family=Sanchez&display=swap');
  @import url('https://fonts.googleapis.com/css?family=Anton&display=swap');
+
  *, :before, :after {
    box-sizing: border-box;
  }
@@ -175,26 +176,31 @@
      opacity: 0;
      top: 100px;
    }
+
    75% {
      opacity: 0.5;
      top: 0px;
    }
+
    100% {
      opacity: 1;
    }
  }
 
- @media only screen and ( max-width: 768px) {
+ @media only screen and (max-width: 768px) {
    .main-content {
      font-size: 35px;
    }
+
    .dash {
      font-size: 35px;
    }
+
    .link {
      color: rgb(20, 20, 20);
      text-decoration: none;
    }
+
    .footer {
      font-family: 'Open Sans', sans-serif;
      letter-spacing: 1.2px;
@@ -202,7 +208,7 @@
      color: rgb(256, 256, 256);
      z-index: 1;
    }
-   
+
    li {
      position: relative;
      display: block;
@@ -214,11 +220,12 @@
      -webkit-animation-fill-mode: both;
      animation-fill-mode: both;
    }
+
    .flex {
      justify-content: center;
      padding: 0%;
    }
-   
+
    .headline {
      font-family: 'Anton', sans-serif;
      font-size: 35px;
