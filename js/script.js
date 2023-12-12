@@ -95,27 +95,24 @@ function buildSwitch() {
 }
 
 function filterProvider(key) {
-
-  console.log(providers[key]);
   
-  //   var images = "";
-  //   for (var i = 0; i < mergedObj.length; i++) {
-  //     var offerObj = mergedObj[i];
-  //     if (offerObj.monetization_type === type) {
-  //       if (offerObj.iconURL !== 'undefined') {
-  //         images += "<li class=provider-icon> <a href=" + offerObj.urls.standard_web + "> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li> </a>";
-  //       } else {
-  //         images = "";
-  //       }
-  //     } else {
-  //       document.querySelector("#provider-list").innerHTML = "";
-  //     }
-  //   }
-  //   document.querySelector("#provider-list").innerHTML = images;
+var providertype = [];
+providertype = providers[key];
 
-  //   setTimeout(function(){
-  //     document.querySelector("#provider-list").classList.remove('pre-animation');
-  // },100)
+var images = "";
+var link = "";
+var icon = "";
+for (var i = 0; i < providertype.length; i++) {
+
+  link = providertype[i].redirect_link
+  icon = providertype[i].package_icon
+  images += "<li class=provider-icon> <a href="+link+"> <img class=\"channel-img\" src="+icon+"></li></a>";
+}
+document.querySelector("#provider-list").innerHTML = images;
+setTimeout(function(){
+  document.querySelector("#provider-list").classList.remove('pre-animation');
+},100)
+
 }
 
 function findObjectByKey(array, key, value) {
