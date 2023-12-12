@@ -5,11 +5,7 @@ var mergedObj = "";
 
 $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
-
-    var object = $(this).attr("data-object");
     var id = $(this).attr("data-id");
-    var type = $(this).attr("data-object")
-
     fetchMovieDetails(id);
   });
 
@@ -95,23 +91,23 @@ function buildSwitch() {
 }
 
 function filterProvider(key) {
-  
-var providertype = [];
-providertype = providers[key];
 
-var images = "";
-var link = "";
-var icon = "";
-for (var i = 0; i < providertype.length; i++) {
+  var providertype = [];
+  providertype = providers[key];
 
-  link = providertype[i].redirect_link
-  icon = providertype[i].package_icon
-  images += "<li class=provider-icon> <a href="+link+"> <img class=\"channel-img\" src="+icon+"></li></a>";
-}
-document.querySelector("#provider-list").innerHTML = images;
-setTimeout(function(){
-  document.querySelector("#provider-list").classList.remove('pre-animation');
-},100)
+  var images = "";
+  var link = "";
+  var icon = "";
+  for (var i = 0; i < providertype.length; i++) {
+
+    link = providertype[i].redirect_link
+    icon = providertype[i].package_icon
+    images += "<li class=provider-icon> <a href=" + link + "> <img class=\"channel-img\" src=" + icon + "></li></a>";
+  }
+  document.querySelector("#provider-list").innerHTML = images;
+  setTimeout(function () {
+    document.querySelector("#provider-list").classList.remove('pre-animation');
+  }, 100)
 
 }
 
