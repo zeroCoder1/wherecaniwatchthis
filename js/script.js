@@ -10,7 +10,7 @@ $(document).ready(function () {
     var id = $(this).attr("data-id");
     var type = $(this).attr("data-object")
 
-    fetchMovieDetails(type, id);
+    fetchMovieDetails(id);
   });
 
 });
@@ -19,27 +19,24 @@ var HttpClient = function () {
   this.get = function (aUrl, aCallback) {
     var anHttpRequest = new XMLHttpRequest();
     anHttpRequest.onreadystatechange = function () {
-      if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+      if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200) {
         aCallback(anHttpRequest.responseText);
+      } else {
+        console.log("Not Found");
+      }
     }
 
     anHttpRequest.open("GET", aUrl, true);
+    anHttpRequest.setRequestHeader("X-language", "en");
+    anHttpRequest.setRequestHeader("X-country", "IN");
     anHttpRequest.send(null);
   }
 }
 
-function fetchProviders() {
-  var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/en_IN/providers", function (response) {
-    var jsonObj = JSON.parse(response);
-    providers = jsonObj;
-  });
-}
-
-function fetchMovieDetails(type, id) {
+function fetchMovieDetails(id) {
   var jsonObj = ""
   var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/en_IN/" + type + "/" + id, function (response) {
+  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
     jsonObj = JSON.parse(response);
     showModal(jsonObj);
   });
@@ -51,36 +48,18 @@ function showModal(details) {
   container.classList.add('pre-animation');
 
   modal.style.display = "block";
-  document.querySelector(".modal-title").innerHTML = details.title;
-  document.querySelector(".description").innerHTML = details.short_description;
+  document.querySelector(".modal-title").innerHTML = details.title_content.title;
+  document.querySelector(".description").innerHTML = details.summary;
   var img = "";
   for (var i = 0; i < 3; i++) {
-    if (details.hasOwnProperty('backdrops')) {
-      if (typeof details.backdrops[i] !== "undefined") {
-        var imageURL = details.backdrops[i].backdrop_url;
-        img += "<img class=\"backdrop\" src=" + "https://s.prod.supr.ninja/images?url=" + imageURL.replace("{profile}", "s1920>")
-      } else {
-        img = ""
-      }
-    } else {
-      img = ""
-    }
+    var imageURL = details.title_backdrops[i];
+    img += "<img class=\"backdrop\" src=" + imageURL + ">"
   }
 
   document.querySelector(".crossfade").innerHTML = "<div class=\"gallery\">" + img + "</div>";
+  document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + details.scores.imdbScore + "</span>";
+  document.querySelector(".rt").innerHTML = "TMDb" + "<br>" + "<span class= score-details>" + details.scores.tmdbScore + "</span>";
 
-  for (var i = 0; i < details.scoring.length; i++) {
-    var detail = details.scoring[i];
-
-    if (detail.provider_type === "imdb:score") {
-      document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + detail.value + "</span>";
-    }
-
-    if (detail.provider_type === "tomato:meter") {
-      document.querySelector(".rt").innerHTML = "Rotten Tomatoes" + "<br>" + "<span class= score-details>" + detail.value + "</span>";
-    }
-
-  }
 
   // if (details.clips) {
   //   var clip = "";
@@ -94,60 +73,11 @@ function showModal(details) {
   //   document.querySelector("#video").innerHTML = "";
   // }
 
-  var channels = ""
-  var img = ""
-  var filterIcon = ""
-  if (details.hasOwnProperty('offers')) {
-    for (var i = 0; i < details.offers.length; i++) {
-      if (typeof details.offers[i] !== "undefined") {
-        var offer = details.offers[i];
-        objMatches = findObjectByKey(providers, 'id', offer.provider_id);
-        if (objMatches !== null) {
-          if (objMatches.icon_url !== null) {
-            details.offers[i].iconURL = "https://s.prod.supr.ninja/images?url=" + objMatches.icon_url.replace("{profile}", "s100");
-
-            if (objMatches.clear_name !== "undefined") {
-              details.offers[i].clearName = objMatches.clear_name;
-            }
-            // channels += "<img class=\"channel-img\" src=" + "https://images.justwatch.com" + objMatches.icon_url.replace("{profile}", "s100>")
-          }
-        }
-      }
-    }
-
-    offerObject = details.offers;
-
-    offerObject.sort(function (x, y) {
-      if (x['id'] < y['id']) {
-        return -1;
-      }
-      if (x['id'] > y['id']) {
-        return 1;
-      }
-      return 0;
-    });
-
-    // iterate over each one, if this one has the same id as the previous one, accumulate
-    // else add to b
-    var lastId;
-    var b = [];
-    for (var i = 0; i < offerObject.length; i++) {
-      if (lastId == offerObject[i]['provider_id']) {
-        b[b.length - 1]['provider_id'] += offerObject[i]['provider_id'];
-        b[b.length - 1]['presentation_type'] += "|" + offerObject[i]['presentation_type'];
-      } else {
-        b[b.length] = (offerObject[i]);
-        lastId = offerObject[i]['provider_id'];
-      }
-    }
-    mergedObj = b;
-    buildSwitch(mergedObj);
-  } else {
-    // document.querySelector("#provider-list").innerHTML = "";
-  }
+  providers = details.providers;
+  buildSwitch();
 }
 
-function buildSwitch(offerObject) {
+function buildSwitch() {
 
   var buy = ""
   var rent = ""
@@ -155,48 +85,37 @@ function buildSwitch(offerObject) {
   var stream = ""
   var ads = ""
 
-  for (var i = 0; i < offerObject.length; i++) {
-    var offerObj = offerObject[i];
-    if (offerObj.monetization_type === "free") {
-      free = "<input id=" + "\"" + "free" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "free" + "\">" + "free" + "</label>"
-    }
-    if (offerObj.monetization_type === "ads") {
-      ads = "<input id=" + "\"" + "ads" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "ads" + "\">" + "ads" + "</label>"
-    }
-    if (offerObj.monetization_type === "flatrate") {
-      stream = "<input id=" + "\"" + "flatrate" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "flatrate" + "\">" + "stream" + "</label>"
-    }
-    if (offerObj.monetization_type === "buy") {
-      buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
-    }
-    if (offerObj.monetization_type === "rent") {
-      rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
-    }
-  }
-  document.querySelector(".switch-toggle").innerHTML =  free + ads + stream + buy + rent;
+  stream = "<input id=" + "\"" + "flatrate" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "flatrate" + "\">" + "stream" + "</label>"
+  free = "<input id=" + "\"" + "free" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "free" + "\">" + "free" + "</label>"
+  buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
+  rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
+  ads = "<input id=" + "\"" + "ads" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "ads" + "\">" + "ads" + "</label>"
 
-
+  document.querySelector(".switch-toggle").innerHTML = free + ads + stream + buy + rent;
 }
 
-function filterProvider(type) {
-  var images = "";
-  for (var i = 0; i < mergedObj.length; i++) {
-    var offerObj = mergedObj[i];
-    if (offerObj.monetization_type === type) {
-      if (offerObj.iconURL !== 'undefined') {
-        images += "<li class=provider-icon> <a href=" + offerObj.urls.standard_web + "> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li> </a>";
-      } else {
-        images = "";
-      }
-    } else {
-      document.querySelector("#provider-list").innerHTML = "";
-    }
-  }
-  document.querySelector("#provider-list").innerHTML = images;
+function filterProvider(key) {
 
-  setTimeout(function(){
-    document.querySelector("#provider-list").classList.remove('pre-animation');
-},100)
+  console.log(providers[key]);
+  
+  //   var images = "";
+  //   for (var i = 0; i < mergedObj.length; i++) {
+  //     var offerObj = mergedObj[i];
+  //     if (offerObj.monetization_type === type) {
+  //       if (offerObj.iconURL !== 'undefined') {
+  //         images += "<li class=provider-icon> <a href=" + offerObj.urls.standard_web + "> <img class=\"channel-img\" src=" + offerObj.iconURL + "></li> </a>";
+  //       } else {
+  //         images = "";
+  //       }
+  //     } else {
+  //       document.querySelector("#provider-list").innerHTML = "";
+  //     }
+  //   }
+  //   document.querySelector("#provider-list").innerHTML = images;
+
+  //   setTimeout(function(){
+  //     document.querySelector("#provider-list").classList.remove('pre-animation');
+  // },100)
 }
 
 function findObjectByKey(array, key, value) {
@@ -213,9 +132,8 @@ function PopulateDropDownList(data) {
   ddlCustomers.empty();
   $(data).each(function () {
     var option = $("<li />");
-    var poster = this.poster;
-    var posterURL = poster.replace("{profile}", "s332>");
-    option.html("<img class=thumbnail src=" + "https://s.prod.supr.ninja/images?url=" + posterURL + "<p>" + this.title + " <br>" + "(" + this.original_release_year + ")" + "</p>");
+    var poster = this.poster_url;
+    option.html("<img class=thumbnail src=" + poster + ">" + "<p>" + this.title + " <br>" + "(" + this.release_year + ")" + "</p>");
     option.attr('data-id', this.id);
     option.attr('data-object', this.object_type);
     ddlCustomers.append(option);
@@ -236,10 +154,9 @@ $(document).ready(function () {
   function fetchMatchingCases() {
     var txt = $('input[name="search"]').val();
     var client = new HttpClient();
-    client.get("https://s.prod.supr.ninja/en_IN/movies?query=" + txt, function (response) {
+    client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + txt, function (response) {
       var jsonObj = JSON.parse(response);
-      data = jsonObj.items
-      PopulateDropDownList(data);
+      PopulateDropDownList(jsonObj);
     });
   }
 
