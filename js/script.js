@@ -161,17 +161,16 @@ $(document).ready(function () {
 function getUniquePackages(providers) {
   const uniquePackages = {};
 
-  Object.keys(providers).forEach(key => {
-    const packages = providers[key];
-    const uniqueMap = new Map();
-    packages.forEach(pkg => {
-      if (!uniqueMap.has(pkg.package_name)) {
-        uniqueMap.set(pkg.package_name, pkg);
+  for (let key in providers) {
+    const seenPackageNames = new Set();
+    uniquePackages[key] = providers[key].filter(pkg => {
+      if (!seenPackageNames.has(pkg.package_name)) {
+        seenPackageNames.add(pkg.package_name);
+        return true;
       }
+      return false;
     });
-
-    uniquePackages[key] = Array.from(uniqueMap.values());
-  });
+  }
 
   return uniquePackages;
 }
