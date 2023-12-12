@@ -1,4 +1,5 @@
 var providers = "";
+var uniquePackages;
 
 $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
@@ -74,7 +75,9 @@ function buildSwitch(providers) {
 
   var packageType = ""
 
-  var providerKeys = Object.keys(providers)
+  uniquePackages = getUniquePackages(providers);
+
+  var providerKeys = Object.keys(uniquePackages)
   for (var i = 0; i < providerKeys.length; i++) {
     var packageTypeName = providerKeys[i];
     var providertype = [];
@@ -94,17 +97,21 @@ function buildSwitch(providers) {
 function filterProvider(packageType) {
 
   var providertype = [];
-  providertype = providers[packageType];
+  providertype = uniquePackages[packageType];
 
   var images = "";
   var link = "";
   var icon = "";
+
+
   for (var i = 0; i < providertype.length; i++) {
 
     link = providertype[i].redirect_link
     icon = providertype[i].package_icon
     images += "<li class=provider-icon> <a href=" + link + "> <img class=\"channel-img\" src=" + icon + "></li></a>";
   }
+
+
   document.querySelector("#provider-list").innerHTML = images;
   setTimeout(function () {
     document.querySelector("#provider-list").classList.remove('pre-animation');
@@ -155,4 +162,20 @@ $(document).ready(function () {
   }
 });
 
+function getUniquePackages(providers) {
+  const uniquePackages = {};
 
+  Object.keys(providers).forEach(key => {
+    const packages = providers[key];
+    const uniqueMap = new Map();
+    packages.forEach(pkg => {
+      if (!uniqueMap.has(pkg.package_name)) {
+        uniqueMap.set(pkg.package_name, pkg);
+      }
+    });
+
+    uniquePackages[key] = Array.from(uniqueMap.values());
+  });
+
+  return uniquePackages;
+}
