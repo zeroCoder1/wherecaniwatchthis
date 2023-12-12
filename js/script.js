@@ -1,7 +1,4 @@
 var providers = "";
-var offerObject = "";
-var objMatches = "";
-var mergedObj = "";
 
 $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
@@ -70,30 +67,34 @@ function showModal(details) {
   // }
 
   providers = details.providers;
-  buildSwitch();
+  buildSwitch(providers);
 }
 
-function buildSwitch() {
+function buildSwitch(providers) {
 
-  var buy = ""
-  var rent = ""
-  var free = ""
-  var stream = ""
-  var ads = ""
+  var packageType = ""
 
-  stream = "<input id=" + "\"" + "flatrate" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "flatrate" + "\">" + "stream" + "</label>"
-  free = "<input id=" + "\"" + "free" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "free" + "\">" + "free" + "</label>"
-  buy = "<input id=" + "\"" + "buy" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "buy" + "\">" + "buy" + "</label>"
-  rent = "<input id=" + "\"" + "rent" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "rent" + "\">" + "rent" + "</label>"
-  ads = "<input id=" + "\"" + "ads" + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + "ads" + "\">" + "ads" + "</label>"
+  var providerKeys = Object.keys(providers)
+  for (var i = 0; i < providerKeys.length; i++) {
+    var packageTypeName = providerKeys[i];
+    var providertype = [];
+    providertype = providers[packageTypeName];
 
-  document.querySelector(".switch-toggle").innerHTML = free + ads + stream + buy + rent;
+    if (providertype.length > 0) {
+      if (packageTypeName == "flatrate") {
+        packageType += "<input id=" + "\"" + packageTypeName + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + packageTypeName + "\">" + "Stream" + "</label>"
+      } else {
+        packageType += "<input id=" + "\"" + packageTypeName + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + packageTypeName + "\">" + packageTypeName + "</label>"
+      }
+    }
+  }
+  document.querySelector(".switch-toggle").innerHTML = packageType;
 }
 
-function filterProvider(key) {
+function filterProvider(packageType) {
 
   var providertype = [];
-  providertype = providers[key];
+  providertype = providers[packageType];
 
   var images = "";
   var link = "";
@@ -152,7 +153,6 @@ $(document).ready(function () {
       PopulateDropDownList(jsonObj);
     });
   }
-
 });
 
 
