@@ -19,16 +19,19 @@ ul#growing-search-container {
   margin: 70px auto 0 auto;
   padding: 0;
 }
-ul#growing-search-container > li {
+
+ul#growing-search-container>li {
   float: left;
   margin-right: 20px;
   margin-bottom: 20px;
   padding: 10px 10px;
 }
-ul#growing-search-container > li:last-child {
+
+ul#growing-search-container>li:last-child {
   margin-right: 0;
 }
-ul#growing-search-container > li > span {
+
+ul#growing-search-container>li>span {
   margin-bottom: 10px;
 }
 
@@ -53,10 +56,10 @@ ul#growing-search-container > li > span {
   padding-left: 5px;
   padding-bottom: 5px;
   width: 250px;
-  color:rgb(20, 20, 20);
+  color: rgb(20, 20, 20);
   border-bottom: 1px solid rgb(20, 20, 20);
   text-transform: uppercase;
-  background-color:#DEDDDD;
+  background-color: #DEDDDD;
   font-weight: bold;
 }
 

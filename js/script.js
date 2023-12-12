@@ -1,3 +1,4 @@
+var jsonObj = ""
 var providers = "";
 var uniquePackages;
 
@@ -14,9 +15,14 @@ var HttpClient = function () {
     var anHttpRequest = new XMLHttpRequest();
     anHttpRequest.onreadystatechange = function () {
       if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200) {
+        document.querySelector(".headline").innerHTML = "Where can I watch this";
         aCallback(anHttpRequest.responseText);
+      } else if (anHttpRequest.status == 404) {
+        document.querySelector(".headline").innerHTML = "AW SNAP!!";
+        var ddlCustomers = $("#dataList");
+        ddlCustomers.empty();
       } else {
-        console.log("Not Found");
+        document.querySelector(".headline").innerHTML = "Let's do this";
       }
     }
 
@@ -28,7 +34,7 @@ var HttpClient = function () {
 }
 
 function fetchMovieDetails(id) {
-  var jsonObj = ""
+  jsonObj = ""
   var client = new HttpClient();
   client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
     jsonObj = JSON.parse(response);
@@ -111,21 +117,11 @@ function filterProvider(packageType) {
     images += "<li class=provider-icon> <a href=" + link + "> <img class=\"channel-img\" src=" + icon + "></li></a>";
   }
 
-
   document.querySelector("#provider-list").innerHTML = images;
   setTimeout(function () {
     document.querySelector("#provider-list").classList.remove('pre-animation');
   }, 100)
 
-}
-
-function findObjectByKey(array, key, value) {
-  for (var i = 0; i < array.length; i++) {
-    if (array[i][key] === value) {
-      return array[i];
-    }
-  }
-  return null;
 }
 
 function PopulateDropDownList(data) {
