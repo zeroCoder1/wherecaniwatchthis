@@ -51,7 +51,7 @@ function showModal(details) {
   document.querySelector(".modal-title").innerHTML = details.title_content.title;
   document.querySelector(".description").innerHTML = details.summary;
   var img = "";
-  for (var i = 0; i < 3; i++) {
+  for (var i = 0; i < details.title_backdrops.length; i++) {
     var imageURL = details.title_backdrops[i];
     img += "<img class=\"backdrop\" src=" + imageURL + ">"
   }
