@@ -88,9 +88,9 @@
  }
 
  .thumbnail {
-   /* border: 1px solid #ddd; */
+   border: 1px solid #ddd;
    border-radius: 7px;
-   /* padding: 5px; */
+   padding: 5px;
    width: 250px;
    box-shadow: 0px 20px 40px rgba(0, 0, 0, 0.2);
  }
