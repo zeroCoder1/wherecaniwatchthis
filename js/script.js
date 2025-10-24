@@ -106,7 +106,7 @@ function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
   client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
     var responseData = JSON.parse(response);
     
-    if (hasValidProviders(responseData.providers)) {
+      if (hasValidProviders(responseData.providers)) {
       // Found providers in current country, use this data
       jsonObj = responseData;
       jsonObj.sourceCountry = currentCountry; // Track which country provided the data
@@ -159,23 +159,20 @@ function showModal(details) {
 
   // Show country availability message if content is from a different country
   var countryAvailabilityElement = document.querySelector("#country-availability");
-  console.log("Source Country:", details.sourceCountry); // Debug log
-  console.log("Country availability element:", countryAvailabilityElement); // Debug log
   
-  if (details.sourceCountry && details.sourceCountry !== "IN") {
+  if (countryAvailabilityElement && details.sourceCountry && details.sourceCountry !== "IN") {
     var countryNames = {
       "US": "United States",
       "GB": "United Kingdom", 
       "CA": "Canada"
     };
     var countryName = countryNames[details.sourceCountry] || details.sourceCountry;
-    var message = "📍 This content isn't available in your home country, but is available in " + countryName + ".";
-    console.log("Showing country message:", message); // Debug log
-    countryAvailabilityElement.innerHTML = message;
+    countryAvailabilityElement.innerHTML = "📍 This content isn't available in your home country, but is available in " + countryName + ".";
     countryAvailabilityElement.style.display = "block";
   } else {
-    console.log("Hiding country message - same country or no source country"); // Debug log
-    countryAvailabilityElement.style.display = "none";
+    if (countryAvailabilityElement) {
+      countryAvailabilityElement.style.display = "none";
+    }
   }
 
   providers = details.providers;
