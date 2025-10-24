@@ -5,40 +5,119 @@ var uniquePackages;
 $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
     var id = $(this).attr("data-id");
+    var title = $(this).find("p").text().split("(")[0].trim(); // Extract title
     fetchMovieDetails(id);
+    
+    // Update URL for shareability
+    updateURL(id, title);
   });
 
+  // Handle direct URL access and browser back/forward
+  handleURLRouting();
+  
+  // Listen for browser back/forward button
+  window.addEventListener('popstate', function(event) {
+    handleURLRouting();
+  });
+  
+  // Listen for Escape key to close modal
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && modal && modal.style.display === 'block') {
+      closeModalAndResetURL();
+    }
+  });
 });
 
 var HttpClient = function () {
-  this.get = function (aUrl, aCallback) {
+  this.get = function (aUrl, aCallback, country, errorCallback) {
+    var countryCode = country || "IN"; // Default to India if no country specified
     var anHttpRequest = new XMLHttpRequest();
     anHttpRequest.onreadystatechange = function () {
       if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200) {
         document.querySelector(".headline").innerHTML = "Where can I watch this";
         aCallback(anHttpRequest.responseText);
-      } else if (anHttpRequest.status == 404) {
-        document.querySelector(".headline").innerHTML = "AW SNAP!!";
-        var ddlCustomers = $("#dataList");
-        ddlCustomers.empty();
-      } else {
-        document.querySelector(".headline").innerHTML = "Let's do this";
+      } else if (anHttpRequest.readyState == 4 && anHttpRequest.status == 404) {
+        if (errorCallback) {
+          errorCallback();
+        } else {
+          document.querySelector(".headline").innerHTML = "AW SNAP!!";
+          var ddlCustomers = $("#dataList");
+          ddlCustomers.empty();
+        }
+      } else if (anHttpRequest.readyState == 4) {
+        if (errorCallback) {
+          errorCallback();
+        } else {
+          document.querySelector(".headline").innerHTML = "Let's do this";
+        }
       }
     }
 
     anHttpRequest.open("GET", aUrl, true);
     anHttpRequest.setRequestHeader("X-language", "en");
-    anHttpRequest.setRequestHeader("X-country", "IN");
+    anHttpRequest.setRequestHeader("X-country", countryCode);
     anHttpRequest.send(null);
   }
 }
 
+// Helper function to check if providers object is empty or has no streaming options
+function hasValidProviders(providers) {
+  if (!providers) return false;
+  
+  var hasAnyProviders = false;
+  var providerTypes = ["flatrate", "buy", "rent"];
+  
+  for (var i = 0; i < providerTypes.length; i++) {
+    if (providers[providerTypes[i]] && providers[providerTypes[i]].length > 0) {
+      hasAnyProviders = true;
+      break;
+    }
+  }
+  
+  return hasAnyProviders;
+}
+
 function fetchMovieDetails(id) {
   jsonObj = ""
-  var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
-    jsonObj = JSON.parse(response);
+  
+  // Try India first
+  fetchMovieDetailsWithFallback(id, ["IN", "US", "GB", "CA"], 0);
+}
+
+function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
+  if (countryIndex >= countries.length) {
+    // No providers found in any country, show modal with empty providers
+    jsonObj = {
+      title_content: { title: "Content not available" },
+      summary: "This content is not available for streaming in supported regions.",
+      providers: {},
+      title_backdrops: [],
+      scores: { imdbScore: "N/A", tmdbScore: "N/A" },
+      clips: [],
+      sourceCountry: null // No country had providers
+    };
     showModal(jsonObj);
+    return;
+  }
+  
+  var client = new HttpClient();
+  var currentCountry = countries[countryIndex];
+  
+  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
+    var responseData = JSON.parse(response);
+    
+    if (hasValidProviders(responseData.providers)) {
+      // Found providers in current country, use this data
+      jsonObj = responseData;
+      jsonObj.sourceCountry = currentCountry; // Track which country provided the data
+      showModal(jsonObj);
+    } else {
+      // No providers in current country, try next country
+      fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
+    }
+  }, currentCountry, function() {
+    // Error callback - try next country
+    fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
   });
 }
 
@@ -50,6 +129,11 @@ function showModal(details) {
   modal.style.display = "block";
   document.querySelector(".modal-title").innerHTML = details.title_content.title;
   document.querySelector(".description").innerHTML = details.summary;
+  
+  // Update page title if not already set by URL routing
+  if (!document.title.includes(details.title_content.title)) {
+    document.title = details.title_content.title + " - Where Can I Watch This?";
+  }
   var img = "";
   for (var i = 0; i < details.title_backdrops.length; i++) {
     var imageURL = details.title_backdrops[i];
@@ -72,6 +156,27 @@ function showModal(details) {
   // } else {
   //   document.querySelector("#video").innerHTML = "";
   // }
+
+  // Show country availability message if content is from a different country
+  var countryAvailabilityElement = document.querySelector("#country-availability");
+  console.log("Source Country:", details.sourceCountry); // Debug log
+  console.log("Country availability element:", countryAvailabilityElement); // Debug log
+  
+  if (details.sourceCountry && details.sourceCountry !== "IN") {
+    var countryNames = {
+      "US": "United States",
+      "GB": "United Kingdom", 
+      "CA": "Canada"
+    };
+    var countryName = countryNames[details.sourceCountry] || details.sourceCountry;
+    var message = "📍 This content isn't available in your home country, but is available in " + countryName + ".";
+    console.log("Showing country message:", message); // Debug log
+    countryAvailabilityElement.innerHTML = message;
+    countryAvailabilityElement.style.display = "block";
+  } else {
+    console.log("Hiding country message - same country or no source country"); // Debug log
+    countryAvailabilityElement.style.display = "none";
+  }
 
   providers = details.providers;
   buildSwitch(providers);
@@ -154,7 +259,7 @@ $(document).ready(function () {
     client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + txt, function (response) {
       var jsonObj = JSON.parse(response);
       PopulateDropDownList(jsonObj);
-    });
+    }, "IN"); // Always search with India for search results
   }
 });
 
@@ -173,4 +278,44 @@ function getUniquePackages(providers) {
   }
 
   return uniquePackages;
+}
+
+// URL routing functions for shareable links
+function updateURL(movieId, movieTitle) {
+  var cleanTitle = movieTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
+  var newURL = '#movie/' + movieId + '/' + cleanTitle;
+  
+  // Update URL without reloading page
+  history.pushState({ movieId: movieId, title: movieTitle }, movieTitle + ' - Where Can I Watch This?', newURL);
+  
+  // Update page title
+  document.title = movieTitle + ' - Where Can I Watch This?';
+}
+
+function handleURLRouting() {
+  var hash = window.location.hash;
+  
+  if (hash.startsWith('#movie/')) {
+    var parts = hash.split('/');
+    var movieId = parts[1];
+    
+    if (movieId) {
+      // Load movie details from URL
+      fetchMovieDetails(movieId);
+    }
+  } else {
+    // No hash or invalid hash - close modal and reset title
+    if (modal) {
+      modal.style.display = "none";
+    }
+    document.title = "Where Can I Watch This?";
+  }
+}
+
+function closeModalAndResetURL() {
+  modal.style.display = "none";
+  
+  // Reset URL to homepage without hash
+  history.pushState({}, "Where Can I Watch This?", window.location.pathname);
+  document.title = "Where Can I Watch This?";
 }
