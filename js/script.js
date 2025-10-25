@@ -6,14 +6,16 @@ $(document).ready(function () {
   $("#dataList").on("click", "li", function () {
     var id = $(this).attr("data-id");
     var title = $(this).find("p").text().split("(")[0].trim(); // Extract title
-    fetchMovieDetails(id);
     
-    // Update URL for shareability
+    // Update URL first, then fetch details
     updateURL(id, title);
+    fetchMovieDetails(id);
   });
 
-  // Handle direct URL access and browser back/forward
-  handleURLRouting();
+  // Handle direct URL access and browser back/forward (with slight delay to ensure DOM is ready)
+  setTimeout(function() {
+    handleURLRouting();
+  }, 100);
   
   // Listen for browser back/forward button
   window.addEventListener('popstate', function(event) {
@@ -80,6 +82,9 @@ function hasValidProviders(providers) {
 function fetchMovieDetails(id) {
   jsonObj = ""
   
+  // Show loading state
+  document.querySelector(".headline").innerHTML = "Loading...";
+  
   // Try India first
   fetchMovieDetailsWithFallback(id, ["IN", "US", "GB", "CA"], 0);
 }
@@ -87,6 +92,7 @@ function fetchMovieDetails(id) {
 function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
   if (countryIndex >= countries.length) {
     // No providers found in any country, show modal with empty providers
+    document.querySelector(".headline").innerHTML = "Content not found";
     jsonObj = {
       title_content: { title: "Content not available" },
       summary: "This content is not available for streaming in supported regions.",
@@ -106,7 +112,7 @@ function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
   client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
     var responseData = JSON.parse(response);
     
-      if (hasValidProviders(responseData.providers)) {
+    if (hasValidProviders(responseData.providers)) {
       // Found providers in current country, use this data
       jsonObj = responseData;
       jsonObj.sourceCountry = currentCountry; // Track which country provided the data
@@ -116,8 +122,17 @@ function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
       fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
     }
   }, currentCountry, function() {
-    // Error callback - try next country
-    fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
+    // Error callback - try next country if available
+    if (countryIndex + 1 < countries.length) {
+      fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
+    } else {
+      // All countries failed, show error
+      document.querySelector(".headline").innerHTML = "Unable to load content";
+      // Close modal if it was opened from URL
+      if (modal && modal.style.display === 'block') {
+        closeModalAndResetURL();
+      }
+    }
   });
 }
 
@@ -296,23 +311,37 @@ function handleURLRouting() {
     var parts = hash.split('/');
     var movieId = parts[1];
     
-    if (movieId) {
+    if (movieId && movieId.trim() !== '') {
+      // Ensure modal element exists before proceeding
+      if (typeof modal === 'undefined' || !modal) {
+        // Retry after a short delay if modal not ready
+        setTimeout(handleURLRouting, 200);
+        return;
+      }
+      
       // Load movie details from URL
       fetchMovieDetails(movieId);
+    } else {
+      // Invalid movie ID, go to homepage
+      closeModalAndResetURL();
     }
   } else {
     // No hash or invalid hash - close modal and reset title
-    if (modal) {
+    if (typeof modal !== 'undefined' && modal) {
       modal.style.display = "none";
     }
     document.title = "Where Can I Watch This?";
+    document.querySelector(".headline").innerHTML = "Where can I watch this";
   }
 }
 
 function closeModalAndResetURL() {
-  modal.style.display = "none";
+  if (typeof modal !== 'undefined' && modal) {
+    modal.style.display = "none";
+  }
   
   // Reset URL to homepage without hash
   history.pushState({}, "Where Can I Watch This?", window.location.pathname);
   document.title = "Where Can I Watch This?";
+  document.querySelector(".headline").innerHTML = "Where can I watch this";
 }
