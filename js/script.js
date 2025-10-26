@@ -59,6 +59,7 @@ var HttpClient = function () {
     anHttpRequest.setRequestHeader("X-language", "en");
     anHttpRequest.setRequestHeader("X-country", countryCode);
     anHttpRequest.setRequestHeader("Cache-Control", "no-cache");
+    anHttpRequest.send(null);
   }
 }
 
