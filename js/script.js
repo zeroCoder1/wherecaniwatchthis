@@ -1,8 +1,26 @@
 var jsonObj = ""
 var providers = "";
 var uniquePackages;
+var selectedCountry = "IN"; // Track selected country
+var isUserSelectedCountry = false; // Track if user manually selected a country
 
 $(document).ready(function () {
+  // Load saved country from localStorage on page load
+  var savedCountry = localStorage.getItem("selectedCountry");
+  if (savedCountry) {
+    selectedCountry = savedCountry;
+    isUserSelectedCountry = (selectedCountry !== "IN");
+    $("#country-selector").val(selectedCountry);
+  }
+  
+  // Country selector change event
+  $("#country-selector").on("change", function() {
+    selectedCountry = $(this).val();
+    isUserSelectedCountry = (selectedCountry !== "IN");
+    // Save to localStorage
+    localStorage.setItem("selectedCountry", selectedCountry);
+  });
+
   $("#dataList").on("click", "li", function () {
     var id = $(this).attr("data-id");
     var title = $(this).find("p").text().split("(")[0].trim(); // Extract title
@@ -80,14 +98,66 @@ function hasValidProviders(providers) {
   return hasAnyProviders;
 }
 
+// Helper function to get country name from country code
+function getCountryName(countryCode) {
+  var countryNames = {
+    "IN": "India",
+    "US": "United States",
+    "GB": "United Kingdom",
+    "CA": "Canada"
+  };
+  return countryNames[countryCode] || countryCode;
+}
+
 function fetchMovieDetails(id) {
   jsonObj = ""
   
   // Show loading state
   document.querySelector(".headline").innerHTML = "Loading...";
   
-  // Try India first
-  fetchMovieDetailsWithFallback(id, ["IN", "US", "GB", "CA"], 0);
+  // If user selected a specific country, only search in that country (no fallback)
+  if (isUserSelectedCountry) {
+    fetchMovieDetailsForCountry(id, selectedCountry);
+  } else {
+    // Default India mode: try multiple countries with fallback
+    fetchMovieDetailsWithFallback(id, ["IN", "US", "GB", "CA"], 0);
+  }
+}
+
+function fetchMovieDetailsForCountry(id, country) {
+  var client = new HttpClient();
+  
+  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
+    var responseData = JSON.parse(response);
+    
+    if (hasValidProviders(responseData.providers)) {
+      // Found providers in selected country
+      jsonObj = responseData;
+      jsonObj.sourceCountry = country;
+      jsonObj.isUserSelectedCountry = true; // Flag to indicate user selected this country
+      showModal(jsonObj);
+    } else {
+      // No providers in selected country
+      document.querySelector(".headline").innerHTML = "Content not available";
+      jsonObj = {
+        title_content: { title: "Content not available" },
+        summary: "This content is not available for streaming in " + getCountryName(country) + ".",
+        providers: {},
+        title_backdrops: [],
+        scores: { imdbScore: "N/A", tmdbScore: "N/A" },
+        clips: [],
+        sourceCountry: country,
+        isUserSelectedCountry: true
+      };
+      showModal(jsonObj);
+    }
+  }, country, function() {
+    // Error callback - show error message
+    document.querySelector(".headline").innerHTML = "Unable to load content";
+    if (modal && modal.style.display === 'block') {
+      closeModalAndResetURL();
+    }
+  });
 }
 
 function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
@@ -176,7 +246,8 @@ function showModal(details) {
   // Show country availability message if content is from a different country
   var countryAvailabilityElement = document.querySelector("#country-availability");
   
-  if (countryAvailabilityElement && details.sourceCountry && details.sourceCountry !== "IN") {
+  // Only show country availability if in default mode AND content is from a different country
+  if (countryAvailabilityElement && details.sourceCountry && details.sourceCountry !== "IN" && !details.isUserSelectedCountry) {
     var countryNames = {
       "US": "United States",
       "GB": "United Kingdom", 
@@ -272,7 +343,7 @@ $(document).ready(function () {
     client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + txt, function (response) {
       var jsonObj = JSON.parse(response);
       PopulateDropDownList(jsonObj);
-    }, "IN"); // Always search with India for search results
+    }, selectedCountry); // Use selected country for search
   }
 });
 
