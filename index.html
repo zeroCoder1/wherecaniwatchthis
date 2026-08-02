@@ -65,6 +65,7 @@
 
     <div class="modal-body">
       <p class="description">Some text in the Modal Body</p>
+      <div class="season-browser" id="season-browser" style="display: none;"></div>
       <p class="country-availability" id="country-availability" style="display: none;"></p>
     </div>
 
@@ -76,14 +77,8 @@
       <ul id="provider-list"></ul>
     </div>
 
-    <div class="crossfade"></div>
-
-    <div class="modal-footer">
-      <h3>Modal Footer</h3>
-    </div>
-
-
     <div class="video-gallery">
+      <h3 class="video-title">Trailers</h3>
       <ul id="video" class="video-flex">
         <!-- <iframe style="width: 33%;" src="https://www.youtube.com/embed/tgbNymZ7vqY">
           </iframe> 
@@ -91,6 +86,15 @@
           </iframe> 
           <iframe style="width: 33%" src="https://www.youtube.com/embed/tgbNymZ7vqY"></iframe>  -->
       </ul>
+    </div>
+
+    <div class="suggestions-gallery" id="suggestions-gallery" style="display: none;">
+      <h3 class="suggestions-title">More Like This</h3>
+      <ul id="modal-suggestions" class="flex" style="list-style-type:none;"></ul>
+    </div>
+
+    <div class="modal-footer">
+      <h3>Modal Footer</h3>
     </div>
 
   </div>
