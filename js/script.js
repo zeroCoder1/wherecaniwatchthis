@@ -3,6 +3,95 @@ var providers = "";
 var uniquePackages;
 var selectedCountry = "IN"; // Track selected country
 var isUserSelectedCountry = false; // Track if user manually selected a country
+var currentShowDetails = null;
+var activeSeasonId = null;
+var isSeasonLoading = false;
+var suggestionCache = {};
+
+function setModalLoadingState(isLoading) {
+  var modalContent = document.querySelector(".modal-content");
+  if (modalContent) {
+    if (isLoading) {
+      modalContent.classList.add("is-loading");
+    } else {
+      modalContent.classList.remove("is-loading");
+    }
+  }
+
+  isSeasonLoading = isLoading;
+}
+
+function endSeasonLoadingWithDelay() {
+  setTimeout(function () {
+    setModalLoadingState(false);
+  }, 140);
+}
+
+function setActiveSeasonChip(seasonId) {
+  var chips = document.querySelectorAll("#season-browser .season-chip");
+  for (var i = 0; i < chips.length; i++) {
+    var isShowChip = chips[i].getAttribute("data-view") === "show";
+    var isActive = (isShowChip && !seasonId) || (!isShowChip && chips[i].getAttribute("data-season-id") === seasonId);
+
+    if (isActive) {
+      chips[i].classList.add("active");
+    } else {
+      chips[i].classList.remove("active");
+    }
+  }
+}
+
+function animateChipTap(chipElement) {
+  if (!chipElement || typeof chipElement.animate !== "function") {
+    return;
+  }
+
+  chipElement.animate([
+    { transform: "translateY(0) scale(1)" },
+    { transform: "translateY(1px) scale(0.995)" },
+    { transform: "translateY(0) scale(1)" }
+  ], {
+    duration: 180,
+    easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
+    fill: "none"
+  });
+}
+
+function animateContentUpdate() {
+  var animatedSelectors = [
+    ".modal-title",
+    ".description",
+    ".crossfade",
+    ".imdb",
+    ".rt",
+    ".switch-toggle",
+    "#provider-list",
+    ".video-gallery"
+  ];
+
+  for (var i = 0; i < animatedSelectors.length; i++) {
+    var element = document.querySelector(animatedSelectors[i]);
+    if (!element) {
+      continue;
+    }
+
+    element.classList.remove("ui-fade-in");
+    void element.offsetWidth;
+    element.classList.add("ui-fade-in");
+  }
+}
+
+function scrollModalToTop() {
+  var modalElement = document.getElementById("myModal");
+  if (modalElement) {
+    modalElement.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  var modalContent = document.querySelector(".modal-content");
+  if (modalContent) {
+    modalContent.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
 
 $(document).ready(function () {
   // Load saved country from localStorage on page load
@@ -19,6 +108,12 @@ $(document).ready(function () {
     isUserSelectedCountry = (selectedCountry !== "IN");
     // Save to localStorage
     localStorage.setItem("selectedCountry", selectedCountry);
+
+    // If modal is currently open, force a full reload so the same title is re-fetched
+    // using the newly selected country context.
+    if (modal && modal.style.display === 'block') {
+      window.location.reload();
+    }
   });
 
   $("#dataList").on("click", "li", function () {
@@ -26,6 +121,19 @@ $(document).ready(function () {
     var title = $(this).find("p").text().split("(")[0].trim(); // Extract title
     
     // Update URL first, then fetch details
+    updateURL(id, title);
+    fetchMovieDetails(id);
+  });
+
+  $("#modal-suggestions").on("click", "li", function () {
+    var id = $(this).attr("data-id");
+    var title = $(this).find("p").text().split("(")[0].trim();
+
+    if (!id) {
+      return;
+    }
+
+    scrollModalToTop();
     updateURL(id, title);
     fetchMovieDetails(id);
   });
@@ -45,6 +153,41 @@ $(document).ready(function () {
     if (event.key === 'Escape' && modal && modal.style.display === 'block') {
       closeModalAndResetURL();
     }
+  });
+
+  // Handle season chip clicks in modal
+  $(document).on("click", ".season-chip", function () {
+    if (isSeasonLoading) {
+      return;
+    }
+
+    animateChipTap(this);
+
+    if ($(this).hasClass("active")) {
+      return;
+    }
+
+    var viewType = $(this).attr("data-view");
+    if (viewType === "show") {
+      if (!currentShowDetails) {
+        return;
+      }
+
+      activeSeasonId = null;
+      setActiveSeasonChip(null);
+      updateModalContent(currentShowDetails, false);
+      return;
+    }
+
+    var seasonId = $(this).attr("data-season-id");
+    if (!seasonId || seasonId === activeSeasonId) {
+      return;
+    }
+
+    var previousSeasonId = activeSeasonId;
+    activeSeasonId = seasonId;
+    setActiveSeasonChip(seasonId);
+    fetchSeasonDetails(seasonId, previousSeasonId);
   });
 });
 
@@ -207,63 +350,309 @@ function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
   });
 }
 
-function showModal(details) {
-  document.querySelector("#provider-list").innerHTML = "";
-  var container = document.querySelector("#provider-list");
-  container.classList.add('pre-animation');
-
-  modal.style.display = "block";
-  document.querySelector(".modal-title").innerHTML = details.title_content.title;
-  document.querySelector(".description").innerHTML = details.summary;
-  
-  // Update page title if not already set by URL routing
-  if (!document.title.includes(details.title_content.title)) {
-    document.title = details.title_content.title + " - Where Can I Watch This?";
-  }
-  var img = "";
-  for (var i = 0; i < details.title_backdrops.length; i++) {
-    var imageURL = details.title_backdrops[i];
-    img += "<img class=\"backdrop\" src=" + imageURL + ">"
+function getSortedSeasons(details) {
+  if (!details || !Array.isArray(details.seasons)) {
+    return [];
   }
 
-  document.querySelector(".crossfade").innerHTML = "<div class=\"gallery\">" + img + "</div>";
-  document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + details.scores.imdbScore + "</span>";
-  document.querySelector(".rt").innerHTML = "TMDb" + "<br>" + "<span class= score-details>" + details.scores.tmdbScore + "</span>";
+  return details.seasons.slice().sort(function (a, b) {
+    return (a.season_number || 0) - (b.season_number || 0);
+  });
+}
 
+function renderSeasonBrowser(showDetails) {
+  var seasonBrowser = document.querySelector("#season-browser");
+  if (!seasonBrowser) {
+    return;
+  }
 
-  // if (details.clips) {
-  //   var clip = "";
-  //   //for (var i = 0; i < details.clips.length; i++) {
-  //     var youtuber = details.clips[0];
-  //     clip = "<li class=video-frame><iframe src=https://www.youtube.com/embed/" + youtuber.external_id + " allowfullscreen></iframe></li>";
-  //  // }
-  //   document.querySelector("#video").innerHTML = clip;
+  if (!showDetails || showDetails.object_type !== "SHOW") {
+    seasonBrowser.style.display = "none";
+    seasonBrowser.innerHTML = "";
+    return;
+  }
 
-  // } else {
-  //   document.querySelector("#video").innerHTML = "";
-  // }
+  var seasons = getSortedSeasons(showDetails);
+  if (seasons.length === 0) {
+    seasonBrowser.style.display = "none";
+    seasonBrowser.innerHTML = "";
+    return;
+  }
 
-  // Show country availability message if content is from a different country
+  var chips = "";
+  var showChipClass = "season-chip";
+  if (!activeSeasonId) {
+    showChipClass += " active";
+  }
+  chips += "<button class='" + showChipClass + "' data-view='show'>Show</button>";
+
+  for (var i = 0; i < seasons.length; i++) {
+    var chipClass = "season-chip";
+    if (activeSeasonId === seasons[i].id) {
+      chipClass += " active";
+    }
+
+    chips += "<button class='" + chipClass + "' data-season-id='" + seasons[i].id + "'>Season " + seasons[i].season_number + "</button>";
+  }
+
+  seasonBrowser.innerHTML = chips;
+  seasonBrowser.style.display = "flex";
+}
+
+function renderTrailers(clips) {
+  var videoContainer = document.querySelector("#video");
+  var videoGallery = document.querySelector(".video-gallery");
+  if (!videoContainer) {
+    return;
+  }
+
+  if (!Array.isArray(clips) || clips.length === 0) {
+    videoContainer.innerHTML = "";
+    if (videoGallery) {
+      videoGallery.style.display = "none";
+    }
+    return;
+  }
+
+  if (videoGallery) {
+    videoGallery.style.display = "block";
+  }
+
+  var seenIds = {};
+  var clipHtml = "";
+  var rendered = 0;
+
+  for (var i = 0; i < clips.length; i++) {
+    var clipId = clips[i].external_id;
+    if (!clipId || seenIds[clipId]) {
+      continue;
+    }
+
+    seenIds[clipId] = true;
+    var clipName = clips[i].name || "Watch Trailer";
+    var thumbnailUrl = "https://img.youtube.com/vi/" + clipId + "/hqdefault.jpg";
+    var trailerUrl = clips[i].source_url || ("https://www.youtube.com/watch?v=" + clipId);
+
+    clipHtml += "<li class='video-frame'>" +
+      "<a class='trailer-card' href='" + trailerUrl + "' target='_blank' rel='noopener noreferrer'>" +
+      "<div class='trailer-media'>" +
+      "<img class='trailer-thumbnail' src='" + thumbnailUrl + "' alt='" + clipName.replace(/'/g, "&#39;") + "'>" +
+      "<span class='trailer-play'><i class='fa fa-play'></i></span>" +
+      "</div>" +
+      "<p class='trailer-name'>" + clipName + "</p>" +
+      "</a>" +
+      "</li>";
+    rendered++;
+
+    if (rendered >= 3) {
+      break;
+    }
+  }
+
+  videoContainer.innerHTML = clipHtml;
+}
+
+function buildTitleTileHtml(item) {
+  var poster = item.poster_url || "";
+  var title = item.title || "Untitled";
+  var releaseYear = item.release_year || "N/A";
+  return "<img class=thumbnail src=" + poster + ">" + "<p>" + title + " <br>" + "(" + releaseYear + ")" + "</p>";
+}
+
+function renderSuggestionsList(items) {
+  var suggestionsContainer = $("#modal-suggestions");
+  var suggestionsSection = $("#suggestions-gallery");
+
+  suggestionsContainer.empty();
+
+  if (!Array.isArray(items) || items.length === 0) {
+    suggestionsSection.hide();
+    return;
+  }
+
+  for (var i = 0; i < items.length; i++) {
+    var option = $("<li />");
+    option.html(buildTitleTileHtml(items[i]));
+    option.attr("data-id", items[i].id);
+    option.attr("data-object", items[i].object_type);
+    suggestionsContainer.append(option);
+  }
+
+  suggestionsSection.show();
+}
+
+function fetchAndRenderSuggestions(details, useSeasonLabel) {
+  if (!details || !details.title_content || !details.title_content.title) {
+    renderSuggestionsList([]);
+    return;
+  }
+
+  var baseDetails = (useSeasonLabel && currentShowDetails) ? currentShowDetails : details;
+  var searchTitle = baseDetails.title_content && baseDetails.title_content.title ? baseDetails.title_content.title : "";
+  var currentId = baseDetails.id || details.id;
+
+  if (!searchTitle) {
+    renderSuggestionsList([]);
+    return;
+  }
+
+  var cacheKey = selectedCountry + "::" + searchTitle.toLowerCase();
+  if (suggestionCache[cacheKey]) {
+    var cachedItems = suggestionCache[cacheKey].filter(function (item) {
+      return item.id !== currentId;
+    });
+    renderSuggestionsList(cachedItems);
+    return;
+  }
+
+  var client = new HttpClient();
+  client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + encodeURIComponent(searchTitle), function (response) {
+    var suggestions = JSON.parse(response);
+    var filtered = [];
+
+    for (var i = 0; i < suggestions.length; i++) {
+      if (suggestions[i].id !== currentId) {
+        filtered.push(suggestions[i]);
+      }
+
+      if (filtered.length >= 8) {
+        break;
+      }
+    }
+
+    suggestionCache[cacheKey] = filtered;
+    renderSuggestionsList(filtered);
+  }, selectedCountry, function () {
+    renderSuggestionsList([]);
+  });
+}
+
+function updateCountryAvailability(details) {
   var countryAvailabilityElement = document.querySelector("#country-availability");
-  
-  // Only show country availability if in default mode AND content is from a different country
-  if (countryAvailabilityElement && details.sourceCountry && details.sourceCountry !== "IN" && !details.isUserSelectedCountry) {
+  if (!countryAvailabilityElement) {
+    return;
+  }
+
+  if (details && details.sourceCountry && details.sourceCountry !== "IN" && !details.isUserSelectedCountry) {
     var countryNames = {
       "US": "United States",
-      "GB": "United Kingdom", 
+      "GB": "United Kingdom",
       "CA": "Canada"
     };
     var countryName = countryNames[details.sourceCountry] || details.sourceCountry;
     countryAvailabilityElement.innerHTML = "📍 This content isn't available in your home country, but is available in " + countryName + ".";
     countryAvailabilityElement.style.display = "block";
   } else {
-    if (countryAvailabilityElement) {
-      countryAvailabilityElement.style.display = "none";
-    }
+    countryAvailabilityElement.style.display = "none";
+  }
+}
+
+function updateModalContent(details, useSeasonLabel) {
+  if (!details) {
+    return;
   }
 
-  providers = details.providers;
+  var modalTitle = details.title_content && details.title_content.title ? details.title_content.title : "";
+  if (useSeasonLabel && currentShowDetails && currentShowDetails.title_content) {
+    modalTitle = currentShowDetails.title_content.title + " - " + modalTitle;
+  }
+
+  document.querySelector(".modal-title").innerHTML = modalTitle;
+
+  var descriptionHtml = details.summary || "";
+  document.querySelector(".description").innerHTML = descriptionHtml;
+
+  document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + details.scores.imdbScore + "</span>";
+  document.querySelector(".rt").innerHTML = "TMDb" + "<br>" + "<span class= score-details>" + details.scores.tmdbScore + "</span>";
+
+  renderTrailers(details.clips);
+  fetchAndRenderSuggestions(details, useSeasonLabel);
+  updateCountryAvailability(details);
+
+  providers = details.providers || {};
   buildSwitch(providers);
+  document.querySelector("#provider-list").innerHTML = "";
+  animateContentUpdate();
+}
+
+function fetchSeasonDetails(seasonId, previousSeasonId) {
+  if (!seasonId) {
+    return;
+  }
+
+  setModalLoadingState(true);
+
+  if (isUserSelectedCountry) {
+    fetchSeasonDetailsForCountry(seasonId, selectedCountry, previousSeasonId);
+  } else {
+    fetchSeasonDetailsWithFallback(seasonId, ["IN", "US", "GB", "CA"], 0, previousSeasonId);
+  }
+}
+
+function fetchSeasonDetailsForCountry(seasonId, country, previousSeasonId) {
+  var client = new HttpClient();
+  client.get("https://s.prod.supr.ninja/sw/v2/title/" + seasonId + "/detail", function (response) {
+    var responseData = JSON.parse(response);
+    responseData.sourceCountry = country;
+    responseData.isUserSelectedCountry = true;
+
+    activeSeasonId = seasonId;
+    updateModalContent(responseData, true);
+    setActiveSeasonChip(seasonId);
+    endSeasonLoadingWithDelay();
+  }, country, function () {
+    document.querySelector(".headline").innerHTML = "Unable to load season details";
+    activeSeasonId = previousSeasonId || null;
+    setActiveSeasonChip(activeSeasonId);
+    setModalLoadingState(false);
+  });
+}
+
+function fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex, previousSeasonId) {
+  if (countryIndex >= countries.length) {
+    document.querySelector(".headline").innerHTML = "Unable to load season details";
+    activeSeasonId = previousSeasonId || null;
+    setActiveSeasonChip(activeSeasonId);
+    setModalLoadingState(false);
+    return;
+  }
+
+  var client = new HttpClient();
+  var currentCountry = countries[countryIndex];
+
+  client.get("https://s.prod.supr.ninja/sw/v2/title/" + seasonId + "/detail", function (response) {
+    var responseData = JSON.parse(response);
+
+    if (hasValidProviders(responseData.providers)) {
+      responseData.sourceCountry = currentCountry;
+      activeSeasonId = seasonId;
+      updateModalContent(responseData, true);
+      setActiveSeasonChip(seasonId);
+      endSeasonLoadingWithDelay();
+    } else {
+      fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex + 1, previousSeasonId);
+    }
+  }, currentCountry, function () {
+    fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex + 1, previousSeasonId);
+  });
+}
+
+function showModal(details) {
+  document.querySelector("#provider-list").innerHTML = "";
+  var container = document.querySelector("#provider-list");
+  container.classList.add('pre-animation');
+
+  modal.style.display = "block";
+  currentShowDetails = details.object_type === "SHOW" ? details : null;
+  activeSeasonId = null;
+  updateModalContent(details, false);
+  renderSeasonBrowser(currentShowDetails);
+  
+  // Update page title if not already set by URL routing
+  if (!document.title.includes(details.title_content.title)) {
+    document.title = details.title_content.title + " - Where Can I Watch This?";
+  }
+
 }
 
 function buildSwitch(providers) {
@@ -318,8 +707,7 @@ function PopulateDropDownList(data) {
   ddlCustomers.empty();
   $(data).each(function () {
     var option = $("<li />");
-    var poster = this.poster_url;
-    option.html("<img class=thumbnail src=" + poster + ">" + "<p>" + this.title + " <br>" + "(" + this.release_year + ")" + "</p>");
+    option.html(buildTitleTileHtml(this));
     option.attr('data-id', this.id);
     option.attr('data-object', this.object_type);
     ddlCustomers.append(option);
