@@ -7,6 +7,8 @@ var currentShowDetails = null;
 var activeSeasonId = null;
 var isSeasonLoading = false;
 var suggestionCache = {};
+var modal = document.getElementById("myModal");
+var modalCloseButton = document.querySelector(".close");
 
 function setModalLoadingState(isLoading) {
   var modalContent = document.querySelector(".modal-content");
@@ -154,6 +156,18 @@ $(document).ready(function () {
       closeModalAndResetURL();
     }
   });
+
+  if (modalCloseButton) {
+    modalCloseButton.onclick = function () {
+      closeModalAndResetURL();
+    };
+  }
+
+  window.onclick = function (event) {
+    if (event.target === modal) {
+      closeModalAndResetURL();
+    }
+  };
 
   // Handle season chip clicks in modal
   $(document).on("click", ".season-chip", function () {
