@@ -1,107 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
-  <meta content="utf-8" http-equiv="encoding">
-  <title>Where Can I Watch This?</title>
-  <link rel="stylesheet" type="text/css" href="css/style.css">
-  <link rel="stylesheet" type="text/css" href="css/input.css">
-  <link rel="stylesheet" type="text/css" href="css/modal.css">
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'>
-  <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-  <script defer src="js/script.js"></script>
-  <!-- Global site tag (gtag.js) - Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-164558254-1"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-
-    gtag('config', 'UA-164558254-1');
-  </script>
-
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Find where to stream, rent or buy your next movie or TV show. One search. All your platforms.">
+<title>Where Can I Watch This?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=3">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script defer src="js/script.js?v=3"></script>
 </head>
-
-<div class="country-selector-container">
-  <select id="country-selector">
-    <option value="IN">🇮🇳 India (Default)</option>
-    <option value="US">🇺🇸 United States</option>
-    <option value="GB">🇬🇧 United Kingdom</option>
-    <option value="CA">🇨🇦 Canada</option>
-  </select>
-</div>
-
-<p class="headline">Where can I watch this?</p>
-<ul id="growing-search-container">
-  <li>
-    <div class="growing-search">
-      <div class="input">
-        <input id="input" type="text" name="search" placeholder="TV Show / Movie" list="dataList">
-      </div>
-    </div>
-  </li>
-</ul>
-
-<ul id="dataList" class="flex" style="list-style-type:none;"></ul>
-<!-- The Modal -->
-<div id="myModal" class="modal">
-  <!-- Modal content -->
-  <div class="modal-content">
-    <p><span class="close">&times;</span></p>
-    <div class="modal-header">
-      <h2 class="modal-title">Modal Header</h2>
-    </div>
-
-    <div id="image-rating">
-      <div id="movie-rating">
-        <div class="imdb"></div>
-        <div class="rt"></div>
-      </div>
-    </div>
-
-    <div class="modal-body">
-      <p class="description">Some text in the Modal Body</p>
-      <div class="season-browser" id="season-browser" style="display: none;"></div>
-      <p class="country-availability" id="country-availability" style="display: none;"></p>
-    </div>
-
-    <div class="switch-container">
-      <div class="switch-toggle switch-3 switch-candy"></div>
-    </div>
-
-    <div class="modal-providers">
-      <ul id="provider-list"></ul>
-    </div>
-
-    <div class="video-gallery">
-      <h3 class="video-title">Trailers</h3>
-      <ul id="video" class="video-flex">
-        <!-- <iframe style="width: 33%;" src="https://www.youtube.com/embed/tgbNymZ7vqY">
-          </iframe> 
-          <iframe style="width: 33%" src="https://www.youtube.com/embed/tgbNymZ7vqY">
-          </iframe> 
-          <iframe style="width: 33%" src="https://www.youtube.com/embed/tgbNymZ7vqY"></iframe>  -->
-      </ul>
-    </div>
-
-    <div class="suggestions-gallery" id="suggestions-gallery" style="display: none;">
-      <h3 class="suggestions-title">More Like This</h3>
-      <ul id="modal-suggestions" class="flex" style="list-style-type:none;"></ul>
-    </div>
-
-    <div class="modal-footer">
-      <h3>Modal Footer</h3>
-    </div>
-
-  </div>
-</div>
-
-<div class="footer">
-  <a class="link" href="http://supr.design">Brought to you by - Supr•Design</a>
-</div>
-</body>
-
-</html>
+<body>
+<header class="nav"><a class="brand" href="./" aria-label="Where Can I Watch This home"><span class="brand-mark">w<span>↗</span></span><span>WHERE CAN I<br>WATCH THIS?</span></a><a class="nav-link" href="#discover">FIND YOUR NEXT WATCH ↗</a><label class="region"><span>WATCHING FROM</span><select id="country-selector" aria-label="Streaming region"><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option></select></label></header>
+<main class="overflow-x-hidden w-full max-w-full">
+<section class="hero">
+<div class="hero-top"><span>LESS SCROLLING. MORE WATCHING.</span><span>A SHORTCUT TO THE GOOD STUFF.</span></div>
+<div class="hero-title"><h1 class="max-w-6xl">WHAT'S ON.<br><span>WHERE IT'S ON.</span></h1><div class="orbit" aria-hidden="true">↗</div></div>
+<div class="hero-bottom"><p>That movie on your mind. <br>That show everyone’s talking about.<br><strong>Find its streaming home.</strong></p><div class="search-area"><form id="search-form" role="search"><label class="sr-only" for="input">Search movies and TV shows</label><span class="search-icon" aria-hidden="true"></span><input id="input" name="search" type="search" autocomplete="off" placeholder="A movie. A show. Anything."><button type="submit" aria-label="Search">↗</button></form><div class="search-hint"><span>ONE SEARCH. ALL THE POSSIBILITIES.</span><span>PRESS ENTER ↵</span></div></div></div>
+</section>
+<div class="platform-strip" aria-label="Discover availability on streaming platforms"><div class="marquee-track"><span>NETFLIX</span><i>+</i><span>prime video</span><i>+</i><span>Apple TV</span><i>+</i><span>JioHotstar</span><i>+</i><span>Disney+</span><i>+</i><span>MUBI</span><i>+</i><span aria-hidden="true">NETFLIX</span><i>+</i><span aria-hidden="true">prime video</span><i>+</i><span aria-hidden="true">Apple TV</span><i>+</i><span aria-hidden="true">JioHotstar</span><i>+</i><span aria-hidden="true">Disney+</span><i>+</i><span aria-hidden="true">MUBI</span><i>+</i></div></div>
+<section class="catalog" id="discover"><div class="section-heading"><div><span class="eyebrow" id="catalog-label">BREAK THE BROWSING LOOP</span><h2 id="results-heading">Follow your curiosity.</h2></div><span id="result-status" role="status" aria-live="polite">PICK A STARTING POINT ↙</span></div>
+<div id="discovery">
+<div class="discovery-controls"><p id="discovery-status" role="status" aria-live="polite">Finding titles in your catalog…</p><button id="refresh-discovery">Explore more ↻</button></div>
+<div id="discovery-grid" class="discovery-grid" aria-busy="true"></div>
+</div><div id="search-results" hidden><div class="filter-row"><div role="group" aria-label="Filter titles"><button class="active" data-filter="ALL" aria-pressed="true">All titles</button><button data-filter="MOVIE" aria-pressed="false">Movies</button><button data-filter="SHOW" aria-pressed="false">TV shows</button></div><button id="reset-search">Clear search ×</button></div><div id="result-notice" role="status"></div><ul id="dataList" class="results-grid"></ul></div>
+</section>
+<section class="manifesto"><div class="eyebrow">THE SEARCH ENDS HERE.</div><p class="reveal-copy">Great stories.<br>Too many apps.<br><span>One place to look.</span></p><div class="manifesto-bottom"><span class="film-window" aria-hidden="true"></span><p>Stream it. Rent it. Make it yours.<br>See your options, then get straight to the story.</p><a href="#input" class="square-link" aria-label="Find a movie or show">↗</a></div></section>
+<footer><div><span>YOUR SOFA IS CALLING.</span><a href="#input">Find your next watch. ↗</a></div><div class="footer-line"><span>WHERE CAN I WATCH THIS?</span><span>Availability varies by region and provider.</span><a href="https://supr.design" target="_blank" rel="noopener noreferrer">BY SUPR.DESIGN ↗</a></div></footer>
+</main>
+<dialog id="myModal" aria-labelledby="modal-title"><div class="dialog-top"><label class="detail-region">WATCHING FROM <select id="detail-country-selector" aria-label="Title availability region"><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="CA">Canada</option></select></label><button id="close-modal" aria-label="Close title details">CLOSE ×</button></div><div id="detail-status" role="status" aria-live="polite"></div><div id="detail-content"></div></dialog>
+</body></html>

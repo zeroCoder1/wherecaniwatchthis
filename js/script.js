@@ -1,821 +1,290 @@
-var jsonObj = ""
-var providers = "";
-var uniquePackages;
-var selectedCountry = "IN"; // Track selected country
-var isUserSelectedCountry = false; // Track if user manually selected a country
-var currentShowDetails = null;
-var activeSeasonId = null;
-var isSeasonLoading = false;
-var suggestionCache = {};
-var modal = document.getElementById("myModal");
-var modalCloseButton = document.querySelector(".close");
-
-function setModalLoadingState(isLoading) {
-  var modalContent = document.querySelector(".modal-content");
-  if (modalContent) {
-    if (isLoading) {
-      modalContent.classList.add("is-loading");
-    } else {
-      modalContent.classList.remove("is-loading");
-    }
-  }
-
-  isSeasonLoading = isLoading;
+'use strict';
+const $ = selector => document.querySelector(selector);
+const API = 'https://s.prod.supr.ninja/sw/v2/title';
+const countries = {IN:'India',US:'United States',GB:'United Kingdom',CA:'Canada'};
+let country = 'IN';
+try { const saved = localStorage.getItem('selectedCountry'); if (countries[saved]) country = saved; } catch {}
+$('#country-selector').value = country;
+const cache = new Map();
+const requests = {};
+let searchVersion = 0, detailVersion = 0, searchTimer, items = [], filter = 'ALL', currentId = null, showDetails = null, activeSeasonId = null, lastFocus;
+let discoveryVersion = 0, discoveryItems = [], discoveryOffset = 0;
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function safeURL(value) { try { const url = new URL(value); return ['https:','http:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } }
+function cancel(channel) { requests[channel]?.abort(); delete requests[channel]; }
+async function request(path, channel, region = country, refresh = false) {
+  cancel(channel);
+  const key = region + path;
+  const cached = cache.get(key);
+  if (!refresh && cached && Date.now() - cached.savedAt < 300000) return cached.data;
+  const controller = new AbortController(); requests[channel] = controller;
+  const timeout = setTimeout(() => controller.abort(new Error('The request timed out. Please try again.')), 15000);
+  try {
+    // The upstream cache does not vary on X-country. Preserve the original
+    // no-cache header and bypass the browser HTTP cache for regional requests.
+    const response = await fetch(API + path, {
+      headers: {'X-language':'en', 'X-country':region, 'Cache-Control':'no-cache'},
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error('Could not reach the catalog. Please try again.');
+    const data = await response.json();
+    if (!data || typeof data !== 'object') throw new Error('The catalog returned an unexpected response.');
+    if (cache.size > 80) cache.delete(cache.keys().next().value);
+    cache.set(key, {data, savedAt: Date.now()}); return data;
+  } finally { clearTimeout(timeout); if (requests[channel] === controller) delete requests[channel]; }
 }
-
-function endSeasonLoadingWithDelay() {
-  setTimeout(function () {
-    setModalLoadingState(false);
-  }, 140);
+function hasProviders(details) {
+  return ['flatrate', 'rent', 'buy', 'free', 'ads'].some(type => Array.isArray(details.providers?.[type]) && details.providers[type].length > 0);
 }
-
-function setActiveSeasonChip(seasonId) {
-  var chips = document.querySelectorAll("#season-browser .season-chip");
-  for (var i = 0; i < chips.length; i++) {
-    var isShowChip = chips[i].getAttribute("data-view") === "show";
-    var isActive = (isShowChip && !seasonId) || (!isShowChip && chips[i].getAttribute("data-season-id") === seasonId);
-
-    if (isActive) {
-      chips[i].classList.add("active");
-    } else {
-      chips[i].classList.remove("active");
-    }
-  }
-}
-
-function animateChipTap(chipElement) {
-  if (!chipElement || typeof chipElement.animate !== "function") {
-    return;
-  }
-
-  chipElement.animate([
-    { transform: "translateY(0) scale(1)" },
-    { transform: "translateY(1px) scale(0.995)" },
-    { transform: "translateY(0) scale(1)" }
-  ], {
-    duration: 180,
-    easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
-    fill: "none"
-  });
-}
-
-function animateContentUpdate() {
-  var animatedSelectors = [
-    ".modal-title",
-    ".description",
-    ".crossfade",
-    ".imdb",
-    ".rt",
-    ".switch-toggle",
-    "#provider-list",
-    ".video-gallery"
-  ];
-
-  for (var i = 0; i < animatedSelectors.length; i++) {
-    var element = document.querySelector(animatedSelectors[i]);
-    if (!element) {
+async function findAvailability(id, selectedRegion, isCurrent, onProgress = () => {}) {
+  const regions = [selectedRegion, ...Object.keys(countries).filter(region => region !== selectedRegion)];
+  let firstDetails, selectedFailed = false;
+  const failedRegions = [];
+  for (const region of regions) {
+    if (!isCurrent()) return null;
+    onProgress(region);
+    let details;
+    try {
+      details = await request('/' + encodeURIComponent(id) + '/detail', 'details', region);
+      if (!details.title_content) throw new Error('Title details are unavailable. Please try again.');
+    } catch (error) {
+      if (!isCurrent() || error.name === 'AbortError') return null;
+      failedRegions.push(region);
+      if (region === selectedRegion) selectedFailed = true;
       continue;
     }
-
-    element.classList.remove("ui-fade-in");
-    void element.offsetWidth;
-    element.classList.add("ui-fade-in");
+    if (!isCurrent()) return null;
+    firstDetails ||= details;
+    if (hasProviders(details)) return {...details, sourceCountry: region, selectedRegion, selectedFailed, failedRegions};
+  }
+  if (!firstDetails) throw new Error('Could not check availability. Please try again.');
+  return {...firstDetails, sourceCountry: selectedRegion, selectedRegion, selectedFailed, failedRegions, noRegionalProviders: true};
+}
+function availabilityMessage(details) {
+  const selected = countries[details.selectedRegion || country];
+  const source = countries[details.sourceCountry || country];
+  if (details.noRegionalProviders) return details.failedRegions?.length
+    ? `No options found in the regions checked. Could not check ${details.failedRegions.map(region => countries[region]).join(', ')}. Please retry.`
+    : 'No streaming, rental or purchase options listed in India, United States, United Kingdom or Canada.';
+  if (details.sourceCountry && details.sourceCountry !== (details.selectedRegion || country)) return details.selectedFailed
+    ? `Could not check ${selected}. Available in ${source}. These providers are for ${source}.`
+    : `Not available in ${selected}. Available in ${source}. These providers are for ${source}.`;
+  return `Availability in ${source}`;
+}
+function skeletons(count = 5) { return Array.from({length:count}, () => '<li aria-hidden="true"><div class="poster skeleton"></div><div class="skeleton skeleton-line"></div></li>').join(''); }
+function tile(item) {
+  return `<li><button class="title-card" data-id="${esc(item.id)}" data-title="${esc(item.title)}"><span class="poster">${safeURL(item.poster_url) ? `<img src="${esc(safeURL(item.poster_url))}" alt="${esc(item.title)}" loading="lazy" width="300" height="450">` : ''}</span><strong>${esc(item.title || 'Untitled')}</strong><small>${esc(item.release_year || 'Year unavailable')} / ${item.object_type === 'SHOW' ? 'TV SERIES' : 'FILM'} ↗</small></button></li>`;
+}
+function renderResults() {
+  const visible = items.filter(item => filter === 'ALL' || item.object_type === filter);
+  $('#dataList').innerHTML = visible.map(tile).join('');
+  $('#result-status').textContent = `${visible.length} ${visible.length === 1 ? 'TITLE' : 'TITLES'} / ${countries[country].toUpperCase()}`;
+  $('#result-notice').textContent = visible.length ? '' : 'No titles found. Try another title or a shorter search.';
+}
+async function search() {
+  clearTimeout(searchTimer);
+  const query = $('#input').value.trim();
+  const version = ++searchVersion;
+  cancel('search');
+  if (!query) { resetSearch(); return; }
+  $('#discovery').hidden = true; $('#search-results').hidden = false;
+  $('#catalog-label').textContent = 'YOUR SEARCH'; $('#results-heading').textContent = `Results for “${query}”`;
+  $('#result-status').textContent = 'SEARCHING THE CATALOG…'; $('#result-notice').textContent = '';
+  $('#dataList').style.minHeight = Math.max(340, $('#dataList').offsetHeight) + 'px';
+  if (!items.length) $('#dataList').innerHTML = skeletons();
+  $('#dataList').setAttribute('aria-busy','true'); $('#search-form').classList.add('loading-bar');
+  try {
+    const data = await request('?q=' + encodeURIComponent(query), 'search');
+    if (version !== searchVersion) return;
+    if (!Array.isArray(data)) throw new Error('The catalog returned an unexpected response.');
+    items = data; renderResults();
+  } catch (error) {
+    if (version !== searchVersion || error.name === 'AbortError') return;
+    if (!items.length) $('#dataList').innerHTML = '';
+    $('#result-status').textContent = 'CONNECTION INTERRUPTED';
+    $('#result-notice').innerHTML = `${esc(error.message)} <button class="retry" id="retry-search">Try again</button>`;
+  } finally {
+    if (version === searchVersion) { $('#dataList').setAttribute('aria-busy','false'); $('#search-form').classList.remove('loading-bar'); }
   }
 }
-
-function scrollModalToTop() {
-  var modalElement = document.getElementById("myModal");
-  if (modalElement) {
-    modalElement.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  var modalContent = document.querySelector(".modal-content");
-  if (modalContent) {
-    modalContent.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-}
-
-$(document).ready(function () {
-  // Load saved country from localStorage on page load
-  var savedCountry = localStorage.getItem("selectedCountry");
-  if (savedCountry) {
-    selectedCountry = savedCountry;
-    isUserSelectedCountry = (selectedCountry !== "IN");
-    $("#country-selector").val(selectedCountry);
-  }
-  
-  // Country selector change event
-  $("#country-selector").on("change", function() {
-    selectedCountry = $(this).val();
-    isUserSelectedCountry = (selectedCountry !== "IN");
-    // Save to localStorage
-    localStorage.setItem("selectedCountry", selectedCountry);
-
-    // If modal is currently open, force a full reload so the same title is re-fetched
-    // using the newly selected country context.
-    if (modal && modal.style.display === 'block') {
-      window.location.reload();
-    }
+function selectDiscoveryTitles(data, offset = 0) {
+  const seen = new Set();
+  const unique = data.filter(item => {
+    if (!item.id || !item.title || !safeURL(item.poster_url) || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
   });
-
-  $("#dataList").on("click", "li", function () {
-    var id = $(this).attr("data-id");
-    var title = $(this).find("p").text().split("(")[0].trim(); // Extract title
-    
-    // Update URL first, then fetch details
-    updateURL(id, title);
-    fetchMovieDetails(id);
-  });
-
-  $("#modal-suggestions").on("click", "li", function () {
-    var id = $(this).attr("data-id");
-    var title = $(this).find("p").text().split("(")[0].trim();
-
-    if (!id) {
-      return;
-    }
-
-    scrollModalToTop();
-    updateURL(id, title);
-    fetchMovieDetails(id);
-  });
-
-  // Handle direct URL access and browser back/forward (with slight delay to ensure DOM is ready)
-  setTimeout(function() {
-    handleURLRouting();
-  }, 100);
-  
-  // Listen for browser back/forward button
-  window.addEventListener('popstate', function(event) {
-    handleURLRouting();
-  });
-  
-  // Listen for Escape key to close modal
-  document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape' && modal && modal.style.display === 'block') {
-      closeModalAndResetURL();
-    }
-  });
-
-  if (modalCloseButton) {
-    modalCloseButton.onclick = function () {
-      closeModalAndResetURL();
-    };
+  if (!unique.length) return [];
+  const start = offset % unique.length;
+  return [...unique.slice(start), ...unique.slice(0, start)].slice(0, 4);
+}
+function renderDiscovery() {
+  const titles = selectDiscoveryTitles(discoveryItems, discoveryOffset);
+  $('#discovery-grid').innerHTML = titles.map(item => `
+    <button class="discovery-card" data-id="${esc(item.id)}" data-title="${esc(item.title)}">
+      <img src="${esc(safeURL(item.poster_url))}" alt="" width="780" height="1170">
+      <span class="card-top">${item.object_type === 'SHOW' ? 'TV SERIES' : 'FILM'} <b>↗</b></span>
+      <span class="card-bottom"><small>${esc(item.release_year || 'EXPLORE THE CATALOG')}</small>
+        <strong>${esc(item.title)}</strong><span>Find where to watch ↗</span></span>
+    </button>`).join('');
+  $('#discovery-status').textContent = titles.length
+    ? `From the ${countries[country]} catalog. Select a title to check availability.`
+    : `No discovery titles returned for ${countries[country]}. Try a search above.`;
+  window.ScrollTrigger?.refresh();
+}
+async function loadDiscovery(refresh = false) {
+  const version = ++discoveryVersion;
+  const region = country;
+  $('#discovery-status').textContent = `Finding titles in the ${countries[region]} catalog…`;
+  $('#discovery-grid').setAttribute('aria-busy', 'true');
+  $('#refresh-discovery').disabled = true;
+  if (!discoveryItems.length) {
+    $('#discovery-grid').innerHTML = Array.from({length:4}, () => '<div class="discovery-card skeleton" aria-hidden="true"></div>').join('');
   }
-
-  window.onclick = function (event) {
-    if (event.target === modal) {
-      closeModalAndResetURL();
+  try {
+    const data = await request('?q=', 'discovery', region, refresh);
+    if (version !== discoveryVersion) return;
+    if (!Array.isArray(data)) throw new Error('The catalog returned an unexpected response.');
+    discoveryOffset = refresh ? discoveryOffset + 4 : 0;
+    discoveryItems = data;
+    renderDiscovery();
+  } catch (error) {
+    if (version !== discoveryVersion || error.name === 'AbortError') return;
+    if (!discoveryItems.length) $('#discovery-grid').innerHTML = '';
+    $('#discovery-status').innerHTML = `Could not refresh the ${countries[region]} catalog. <button id="retry-discovery" class="retry">Try again</button>`;
+  } finally {
+    if (version === discoveryVersion) {
+      $('#discovery-grid').setAttribute('aria-busy', 'false');
+      $('#refresh-discovery').disabled = false;
     }
-  };
-
-  // Handle season chip clicks in modal
-  $(document).on("click", ".season-chip", function () {
-    if (isSeasonLoading) {
-      return;
-    }
-
-    animateChipTap(this);
-
-    if ($(this).hasClass("active")) {
-      return;
-    }
-
-    var viewType = $(this).attr("data-view");
-    if (viewType === "show") {
-      if (!currentShowDetails) {
-        return;
-      }
-
-      activeSeasonId = null;
-      setActiveSeasonChip(null);
-      updateModalContent(currentShowDetails, false);
-      return;
-    }
-
-    var seasonId = $(this).attr("data-season-id");
-    if (!seasonId || seasonId === activeSeasonId) {
-      return;
-    }
-
-    var previousSeasonId = activeSeasonId;
-    activeSeasonId = seasonId;
-    setActiveSeasonChip(seasonId);
-    fetchSeasonDetails(seasonId, previousSeasonId);
-  });
-});
-
-var HttpClient = function () {
-  this.get = function (aUrl, aCallback, country, errorCallback) {
-    var countryCode = country || "IN"; // Default to India if no country specified
-    var anHttpRequest = new XMLHttpRequest();
-    anHttpRequest.onreadystatechange = function () {
-      if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200) {
-        document.querySelector(".headline").innerHTML = "Where can I watch this";
-        aCallback(anHttpRequest.responseText);
-      } else if (anHttpRequest.readyState == 4 && anHttpRequest.status == 404) {
-        if (errorCallback) {
-          errorCallback();
-        } else {
-          document.querySelector(".headline").innerHTML = "AW SNAP!!";
-          var ddlCustomers = $("#dataList");
-          ddlCustomers.empty();
-        }
-      } else if (anHttpRequest.readyState == 4) {
-        if (errorCallback) {
-          errorCallback();
-        } else {
-          document.querySelector(".headline").innerHTML = "Let's do this";
-        }
-      }
-    }
-
-    anHttpRequest.open("GET", aUrl, true);
-    anHttpRequest.setRequestHeader("X-language", "en");
-    anHttpRequest.setRequestHeader("X-country", countryCode);
-    anHttpRequest.setRequestHeader("Cache-Control", "no-cache");
-    anHttpRequest.send(null);
   }
 }
-
-// Helper function to check if providers object is empty or has no streaming options
-function hasValidProviders(providers) {
-  if (!providers) return false;
-  
-  var hasAnyProviders = false;
-  var providerTypes = ["flatrate", "buy", "rent"];
-  
-  for (var i = 0; i < providerTypes.length; i++) {
-    if (providers[providerTypes[i]] && providers[providerTypes[i]].length > 0) {
-      hasAnyProviders = true;
-      break;
-    }
-  }
-  
-  return hasAnyProviders;
-}
-
-// Helper function to get country name from country code
-function getCountryName(countryCode) {
-  var countryNames = {
-    "IN": "India",
-    "US": "United States",
-    "GB": "United Kingdom",
-    "CA": "Canada"
-  };
-  return countryNames[countryCode] || countryCode;
-}
-
-function fetchMovieDetails(id) {
-  jsonObj = ""
-  
-  // Show loading state
-  document.querySelector(".headline").innerHTML = "Loading...";
-  
-  // If user selected a specific country, only search in that country (no fallback)
-  if (isUserSelectedCountry) {
-    fetchMovieDetailsForCountry(id, selectedCountry);
-  } else {
-    // Default India mode: try multiple countries with fallback
-    fetchMovieDetailsWithFallback(id, ["IN", "US", "GB", "CA"], 0);
+function changeCountry(nextCountry) {
+  if (!countries[nextCountry] || nextCountry === country) return;
+  country = nextCountry;
+  $('#country-selector').value = country;
+  $('#detail-country-selector').value = country;
+  try { localStorage.setItem('selectedCountry', country); } catch {}
+  // Never leave discovery cards from the previous region labeled as the new one.
+  discoveryItems = [];
+  loadDiscovery();
+  if ($('#input').value.trim()) search();
+  if ($('#myModal').open && currentId) {
+    loadDetails(activeSeasonId || currentId, Boolean(activeSeasonId));
   }
 }
-
-function fetchMovieDetailsForCountry(id, country) {
-  var client = new HttpClient();
-  
-  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
-    var responseData = JSON.parse(response);
-    
-    if (hasValidProviders(responseData.providers)) {
-      // Found providers in selected country
-      jsonObj = responseData;
-      jsonObj.sourceCountry = country;
-      jsonObj.isUserSelectedCountry = true; // Flag to indicate user selected this country
-      showModal(jsonObj);
-    } else {
-      // No providers in selected country
-      document.querySelector(".headline").innerHTML = "Content not available";
-      jsonObj = {
-        title_content: { title: "Content not available" },
-        summary: "This content is not available for streaming in " + getCountryName(country) + ".",
-        providers: {},
-        title_backdrops: [],
-        scores: { imdbScore: "N/A", tmdbScore: "N/A" },
-        clips: [],
-        sourceCountry: country,
-        isUserSelectedCountry: true
-      };
-      showModal(jsonObj);
-    }
-  }, country, function() {
-    // Error callback - show error message
-    document.querySelector(".headline").innerHTML = "Unable to load content";
-    if (modal && modal.style.display === 'block') {
-      closeModalAndResetURL();
-    }
-  });
+function resetSearch() {
+  clearTimeout(searchTimer); ++searchVersion; cancel('search'); items = []; $('#input').value = '';
+  $('#search-results').hidden = true; $('#discovery').hidden = false;
+  $('#catalog-label').textContent = 'BREAK THE BROWSING LOOP'; $('#results-heading').textContent = 'Follow your curiosity.';
+  $('#result-status').textContent = 'PICK A STARTING POINT ↙'; $('#search-form').classList.remove('loading-bar');
+  window.ScrollTrigger?.refresh();
 }
-
-function fetchMovieDetailsWithFallback(id, countries, countryIndex) {
-  if (countryIndex >= countries.length) {
-    // No providers found in any country, show modal with empty providers
-    document.querySelector(".headline").innerHTML = "Content not found";
-    jsonObj = {
-      title_content: { title: "Content not available" },
-      summary: "This content is not available for streaming in supported regions.",
-      providers: {},
-      title_backdrops: [],
-      scores: { imdbScore: "N/A", tmdbScore: "N/A" },
-      clips: [],
-      sourceCountry: null // No country had providers
-    };
-    showModal(jsonObj);
-    return;
-  }
-  
-  var client = new HttpClient();
-  var currentCountry = countries[countryIndex];
-  
-  client.get("https://s.prod.supr.ninja/sw/v2/title/" + id + "/detail", function (response) {
-    var responseData = JSON.parse(response);
-    
-    if (hasValidProviders(responseData.providers)) {
-      // Found providers in current country, use this data
-      jsonObj = responseData;
-      jsonObj.sourceCountry = currentCountry; // Track which country provided the data
-      showModal(jsonObj);
-    } else {
-      // No providers in current country, try next country
-      fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
-    }
-  }, currentCountry, function() {
-    // Error callback - try next country if available
-    if (countryIndex + 1 < countries.length) {
-      fetchMovieDetailsWithFallback(id, countries, countryIndex + 1);
-    } else {
-      // All countries failed, show error
-      document.querySelector(".headline").innerHTML = "Unable to load content";
-      // Close modal if it was opened from URL
-      if (modal && modal.style.display === 'block') {
-        closeModalAndResetURL();
-      }
-    }
-  });
+function detailSkeleton() { return '<div class="detail-header"><div class="detail-poster skeleton"></div><div><h2 id="modal-title">Finding your watch.</h2><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line"></div></div></div><div class="availability skeleton"></div>'; }
+function openDialog() {
+  if (!$('#myModal').open) { lastFocus = document.activeElement; $('#myModal').showModal(); document.body.style.overflow = 'hidden'; }
 }
-
-function getSortedSeasons(details) {
-  if (!details || !Array.isArray(details.seasons)) {
-    return [];
-  }
-
-  return details.seasons.slice().sort(function (a, b) {
-    return (a.season_number || 0) - (b.season_number || 0);
-  });
-}
-
-function renderSeasonBrowser(showDetails) {
-  var seasonBrowser = document.querySelector("#season-browser");
-  if (!seasonBrowser) {
-    return;
-  }
-
-  if (!showDetails || showDetails.object_type !== "SHOW") {
-    seasonBrowser.style.display = "none";
-    seasonBrowser.innerHTML = "";
-    return;
-  }
-
-  var seasons = getSortedSeasons(showDetails);
-  if (seasons.length === 0) {
-    seasonBrowser.style.display = "none";
-    seasonBrowser.innerHTML = "";
-    return;
-  }
-
-  var chips = "";
-  var showChipClass = "season-chip";
-  if (!activeSeasonId) {
-    showChipClass += " active";
-  }
-  chips += "<button class='" + showChipClass + "' data-view='show'>Show</button>";
-
-  for (var i = 0; i < seasons.length; i++) {
-    var chipClass = "season-chip";
-    if (activeSeasonId === seasons[i].id) {
-      chipClass += " active";
-    }
-
-    chips += "<button class='" + chipClass + "' data-season-id='" + seasons[i].id + "'>Season " + seasons[i].season_number + "</button>";
-  }
-
-  seasonBrowser.innerHTML = chips;
-  seasonBrowser.style.display = "flex";
-}
-
-function renderTrailers(clips) {
-  var videoContainer = document.querySelector("#video");
-  var videoGallery = document.querySelector(".video-gallery");
-  if (!videoContainer) {
-    return;
-  }
-
-  if (!Array.isArray(clips) || clips.length === 0) {
-    videoContainer.innerHTML = "";
-    if (videoGallery) {
-      videoGallery.style.display = "none";
-    }
-    return;
-  }
-
-  if (videoGallery) {
-    videoGallery.style.display = "block";
-  }
-
-  var seenIds = {};
-  var clipHtml = "";
-  var rendered = 0;
-
-  for (var i = 0; i < clips.length; i++) {
-    var clipId = clips[i].external_id;
-    if (!clipId || seenIds[clipId]) {
-      continue;
-    }
-
-    seenIds[clipId] = true;
-    var clipName = clips[i].name || "Watch Trailer";
-    var thumbnailUrl = "https://img.youtube.com/vi/" + clipId + "/hqdefault.jpg";
-    var trailerUrl = clips[i].source_url || ("https://www.youtube.com/watch?v=" + clipId);
-
-    clipHtml += "<li class='video-frame'>" +
-      "<a class='trailer-card' href='" + trailerUrl + "' target='_blank' rel='noopener noreferrer'>" +
-      "<div class='trailer-media'>" +
-      "<img class='trailer-thumbnail' src='" + thumbnailUrl + "' alt='" + clipName.replace(/'/g, "&#39;") + "'>" +
-      "<span class='trailer-play'><i class='fa fa-play'></i></span>" +
-      "</div>" +
-      "<p class='trailer-name'>" + clipName + "</p>" +
-      "</a>" +
-      "</li>";
-    rendered++;
-
-    if (rendered >= 3) {
-      break;
-    }
-  }
-
-  videoContainer.innerHTML = clipHtml;
-}
-
-function buildTitleTileHtml(item) {
-  var poster = item.poster_url || "";
-  var title = item.title || "Untitled";
-  var releaseYear = item.release_year || "N/A";
-  return "<img class=thumbnail src=" + poster + ">" + "<p>" + title + " <br>" + "(" + releaseYear + ")" + "</p>";
-}
-
-function renderSuggestionsList(items) {
-  var suggestionsContainer = $("#modal-suggestions");
-  var suggestionsSection = $("#suggestions-gallery");
-
-  suggestionsContainer.empty();
-
-  if (!Array.isArray(items) || items.length === 0) {
-    suggestionsSection.hide();
-    return;
-  }
-
-  for (var i = 0; i < items.length; i++) {
-    var option = $("<li />");
-    option.html(buildTitleTileHtml(items[i]));
-    option.attr("data-id", items[i].id);
-    option.attr("data-object", items[i].object_type);
-    suggestionsContainer.append(option);
-  }
-
-  suggestionsSection.show();
-}
-
-function fetchAndRenderSuggestions(details, useSeasonLabel) {
-  if (!details || !details.title_content || !details.title_content.title) {
-    renderSuggestionsList([]);
-    return;
-  }
-
-  var baseDetails = (useSeasonLabel && currentShowDetails) ? currentShowDetails : details;
-  var searchTitle = baseDetails.title_content && baseDetails.title_content.title ? baseDetails.title_content.title : "";
-  var currentId = baseDetails.id || details.id;
-
-  if (!searchTitle) {
-    renderSuggestionsList([]);
-    return;
-  }
-
-  var cacheKey = selectedCountry + "::" + searchTitle.toLowerCase();
-  if (suggestionCache[cacheKey]) {
-    var cachedItems = suggestionCache[cacheKey].filter(function (item) {
-      return item.id !== currentId;
+async function loadDetails(id, season = false) {
+  const focusSeason = season && document.activeElement?.id !== 'detail-country-selector';
+  const version = ++detailVersion; cancel('details'); cancel('related');
+  openDialog();
+  activeSeasonId = season ? id : null;
+  if (!season) { currentId = id; showDetails = null; $('#detail-content').style.minHeight = ''; $('#detail-content').innerHTML = detailSkeleton(); $('#myModal').scrollTop = 0; $('#close-modal').focus(); }
+  $('#detail-content').style.minHeight = Math.max(440, $('#detail-content').offsetHeight) + 'px'; $('#detail-content').setAttribute('aria-busy','true'); $('#detail-status').textContent = season ? 'Updating season availability…' : 'Checking availability in ' + countries[country] + '…';
+  $('#detail-status').classList.add('loading-bar');
+  try {
+    const details = await findAvailability(id, country, () => version === detailVersion, region => {
+      $('#detail-status').textContent = region === country
+        ? 'Checking availability in ' + countries[region] + '…'
+        : 'Checking other countries: ' + countries[region] + '…';
     });
-    renderSuggestionsList(cachedItems);
-    return;
-  }
-
-  var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + encodeURIComponent(searchTitle), function (response) {
-    var suggestions = JSON.parse(response);
-    var filtered = [];
-
-    for (var i = 0; i < suggestions.length; i++) {
-      if (suggestions[i].id !== currentId) {
-        filtered.push(suggestions[i]);
-      }
-
-      if (filtered.length >= 8) {
-        break;
-      }
-    }
-
-    suggestionCache[cacheKey] = filtered;
-    renderSuggestionsList(filtered);
-  }, selectedCountry, function () {
-    renderSuggestionsList([]);
-  });
+    if (version !== detailVersion || !details) return;
+    if (!details.title_content) throw new Error('Title details are unavailable. Please try again.');
+    if (!season) showDetails = details;
+    renderDetails(details, season, id);
+    if (focusSeason) [...document.querySelectorAll('[data-season]')].find(button => button.dataset.season === String(id))?.focus({preventScroll:true});
+    $('#detail-status').textContent = availabilityMessage(details);
+    loadRelated(showDetails || details, version);
+  } catch (error) {
+    if (version !== detailVersion || error.name === 'AbortError') return;
+    $('#detail-status').textContent = error.message;
+    if (!season) $('#detail-content').innerHTML = `<div class="error-panel"><h2 id="modal-title">A brief intermission.</h2><p>We couldn’t load this title. Check your connection and try again.</p><button class="retry" data-retry="${esc(id)}">Try again</button></div>`;
+    else $('#detail-status').innerHTML = `${esc(error.message)} <button class="retry" data-season="${esc(id)}">Retry season</button>`;
+  } finally { if (version === detailVersion) { $('#detail-content').setAttribute('aria-busy','false'); $('#detail-status').classList.remove('loading-bar'); } }
 }
-
-function updateCountryAvailability(details) {
-  var countryAvailabilityElement = document.querySelector("#country-availability");
-  if (!countryAvailabilityElement) {
-    return;
+let displayedProviders = {};
+function renderDetails(details, season, id) {
+  const title = details.title_content?.title || 'Untitled';
+  const fullTitle = season ? `${showDetails.title_content.title} / ${title}` : title;
+  document.title = fullTitle + ' — Where Can I Watch This?';
+  const poster = safeURL(details.poster_url || details.title_content?.poster_url || showDetails?.poster_url || showDetails?.title_content?.poster_url);
+  const seasons = [...(showDetails?.seasons || [])].sort((a,b) => a.season_number - b.season_number);
+  displayedProviders = {};
+  for (const type of ['flatrate','rent','buy','free','ads']) {
+    const seen = new Set();
+    displayedProviders[type] = (Array.isArray(details.providers?.[type]) ? details.providers[type] : []).filter(p => { if (seen.has(p.package_name)) return false; seen.add(p.package_name); return true; });
   }
-
-  if (details && details.sourceCountry && details.sourceCountry !== "IN" && !details.isUserSelectedCountry) {
-    var countryNames = {
-      "US": "United States",
-      "GB": "United Kingdom",
-      "CA": "Canada"
-    };
-    var countryName = countryNames[details.sourceCountry] || details.sourceCountry;
-    countryAvailabilityElement.innerHTML = "📍 This content isn't available in your home country, but is available in " + countryName + ".";
-    countryAvailabilityElement.style.display = "block";
-  } else {
-    countryAvailabilityElement.style.display = "none";
-  }
+  const types = Object.keys(displayedProviders).filter(key => displayedProviders[key].length);
+  const clips = (details.clips || []).filter(c => /^[\w-]{6,20}$/.test(c.external_id)).slice(0,3);
+  $('#detail-content').innerHTML = `<div class="detail-header">${poster ? `<img class="detail-poster" src="${esc(poster)}" alt="${esc(title)}" width="160" height="240">` : '<div class="detail-poster" aria-hidden="true"></div>'}<div><h2 id="modal-title">${esc(fullTitle)}</h2><p class="scores">IMDb ${esc(details.scores?.imdbScore ?? '—')} &nbsp; / &nbsp; TMDb ${esc(details.scores?.tmdbScore ?? '—')}</p><p class="summary">${esc(details.summary || 'No synopsis available for this title.')}</p></div></div>
+  ${seasons.length ? `<div class="season-browser" aria-label="Choose season"><button class="season-chip ${season ? '' : 'active'}" data-show="true" aria-pressed="${!season}">Full show</button>${seasons.map(s => `<button class="season-chip ${season && String(s.id) === String(id) ? 'active' : ''}" data-season="${esc(s.id)}" aria-pressed="${season && String(s.id) === String(id)}">Season ${esc(s.season_number)}</button>`).join('')}</div>` : ''}
+  <section class="availability"><h3>Here's where to watch.</h3><p class="region-note ${details.sourceCountry !== country || details.noRegionalProviders ? 'region-fallback' : ''}">${esc(availabilityMessage(details))}</p>${types.length ? `<p class="region-note">Options for ${countries[details.sourceCountry || country]}. Availability and prices may change.</p>` : ''}<div class="provider-tabs">${types.map((type,i) => `<button class="${i ? '' : 'active'}" data-provider="${type}" aria-pressed="${!i}">${{flatrate:'Stream',rent:'Rent',buy:'Buy',free:'Free',ads:'With ads'}[type]}</button>`).join('')}</div><div class="providers" id="providers">${types.length ? '' : '<p>No streaming, rental or purchase options listed in this region.</p>'}</div></section>
+  ${clips.length ? `<h3>Before you press play.</h3><div class="trailers">${clips.map(c => `<a class="trailer" href="https://www.youtube.com/watch?v=${esc(c.external_id)}" target="_blank" rel="noopener noreferrer"><img src="https://img.youtube.com/vi/${esc(c.external_id)}/hqdefault.jpg" alt="${esc(c.name || 'Trailer')}" loading="lazy"><p>${esc(c.name || 'Watch trailer')} ↗</p></a>`).join('')}</div>` : ''}<section id="related-section" hidden><h3>Keep exploring.</h3><ul id="related-list" class="results-grid related"></ul></section>`;
+  if (types.length) renderProviders(types[0]);
 }
-
-function updateModalContent(details, useSeasonLabel) {
-  if (!details) {
-    return;
-  }
-
-  var modalTitle = details.title_content && details.title_content.title ? details.title_content.title : "";
-  if (useSeasonLabel && currentShowDetails && currentShowDetails.title_content) {
-    modalTitle = currentShowDetails.title_content.title + " - " + modalTitle;
-  }
-
-  document.querySelector(".modal-title").innerHTML = modalTitle;
-
-  var descriptionHtml = details.summary || "";
-  document.querySelector(".description").innerHTML = descriptionHtml;
-
-  document.querySelector(".imdb").innerHTML = "IMDb" + "<br>" + "<span class= score-details>" + details.scores.imdbScore + "</span>";
-  document.querySelector(".rt").innerHTML = "TMDb" + "<br>" + "<span class= score-details>" + details.scores.tmdbScore + "</span>";
-
-  renderTrailers(details.clips);
-  fetchAndRenderSuggestions(details, useSeasonLabel);
-  updateCountryAvailability(details);
-
-  providers = details.providers || {};
-  buildSwitch(providers);
-  document.querySelector("#provider-list").innerHTML = "";
-  animateContentUpdate();
+function renderProviders(type) {
+  $('#providers').innerHTML = displayedProviders[type].map(p => { const link = safeURL(p.redirect_link); return `<${link ? 'a' : 'span'} class="provider" ${link ? `href="${esc(link)}" target="_blank" rel="noopener noreferrer"` : ''}>${safeURL(p.package_icon) ? `<img src="${esc(safeURL(p.package_icon))}" alt="" width="42" height="42">` : ''}<span>${esc(p.package_name || 'Streaming provider')} ${link ? '↗' : ''}</span></${link ? 'a' : 'span'}>`; }).join('');
+  document.querySelectorAll('[data-provider]').forEach(b => { const active = b.dataset.provider === type; b.classList.toggle('active',active); b.setAttribute('aria-pressed',active); });
 }
-
-function fetchSeasonDetails(seasonId, previousSeasonId) {
-  if (!seasonId) {
-    return;
-  }
-
-  setModalLoadingState(true);
-
-  if (isUserSelectedCountry) {
-    fetchSeasonDetailsForCountry(seasonId, selectedCountry, previousSeasonId);
-  } else {
-    fetchSeasonDetailsWithFallback(seasonId, ["IN", "US", "GB", "CA"], 0, previousSeasonId);
-  }
+async function loadRelated(details, version) {
+  try {
+    const data = await request('?q=' + encodeURIComponent(details.title_content.title),'related');
+    if (version !== detailVersion || !$('#myModal').open || !Array.isArray(data)) return;
+    const related = data.filter(item => String(item.id) !== String(currentId)).slice(0,4);
+    $('#related-list').innerHTML = related.map(tile).join(''); $('#related-section').hidden = !related.length;
+  } catch { /* Related titles are optional; the main title stays available. */ }
 }
-
-function fetchSeasonDetailsForCountry(seasonId, country, previousSeasonId) {
-  var client = new HttpClient();
-  client.get("https://s.prod.supr.ninja/sw/v2/title/" + seasonId + "/detail", function (response) {
-    var responseData = JSON.parse(response);
-    responseData.sourceCountry = country;
-    responseData.isUserSelectedCountry = true;
-
-    activeSeasonId = seasonId;
-    updateModalContent(responseData, true);
-    setActiveSeasonChip(seasonId);
-    endSeasonLoadingWithDelay();
-  }, country, function () {
-    document.querySelector(".headline").innerHTML = "Unable to load season details";
-    activeSeasonId = previousSeasonId || null;
-    setActiveSeasonChip(activeSeasonId);
-    setModalLoadingState(false);
-  });
+function closeDetails(updateURL = true) {
+  ++detailVersion; cancel('details'); cancel('related'); $('#myModal').close(); document.body.style.overflow = '';
+  document.title = 'Where Can I Watch This?';
+  if (updateURL && location.hash.startsWith('#movie/')) history.pushState({},'',location.pathname + location.search);
+  lastFocus?.focus();
 }
-
-function fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex, previousSeasonId) {
-  if (countryIndex >= countries.length) {
-    document.querySelector(".headline").innerHTML = "Unable to load season details";
-    activeSeasonId = previousSeasonId || null;
-    setActiveSeasonChip(activeSeasonId);
-    setModalLoadingState(false);
-    return;
-  }
-
-  var client = new HttpClient();
-  var currentCountry = countries[countryIndex];
-
-  client.get("https://s.prod.supr.ninja/sw/v2/title/" + seasonId + "/detail", function (response) {
-    var responseData = JSON.parse(response);
-
-    if (hasValidProviders(responseData.providers)) {
-      responseData.sourceCountry = currentCountry;
-      activeSeasonId = seasonId;
-      updateModalContent(responseData, true);
-      setActiveSeasonChip(seasonId);
-      endSeasonLoadingWithDelay();
-    } else {
-      fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex + 1, previousSeasonId);
-    }
-  }, currentCountry, function () {
-    fetchSeasonDetailsWithFallback(seasonId, countries, countryIndex + 1, previousSeasonId);
-  });
+function navigateTitle(id,title) {
+  history.pushState({},'', '#movie/' + encodeURIComponent(id) + '/' + encodeURIComponent((title || '').toLowerCase().replace(/\s+/g,'-'))); loadDetails(id);
 }
-
-function showModal(details) {
-  document.querySelector("#provider-list").innerHTML = "";
-  var container = document.querySelector("#provider-list");
-  container.classList.add('pre-animation');
-
-  modal.style.display = "block";
-  currentShowDetails = details.object_type === "SHOW" ? details : null;
-  activeSeasonId = null;
-  updateModalContent(details, false);
-  renderSeasonBrowser(currentShowDetails);
-  
-  // Update page title if not already set by URL routing
-  if (!document.title.includes(details.title_content.title)) {
-    document.title = details.title_content.title + " - Where Can I Watch This?";
-  }
-
-}
-
-function buildSwitch(providers) {
-
-  var packageType = ""
-
-  uniquePackages = getUniquePackages(providers);
-
-  var providerKeys = Object.keys(uniquePackages)
-  for (var i = 0; i < providerKeys.length; i++) {
-    var packageTypeName = providerKeys[i];
-    var providertype = [];
-    providertype = providers[packageTypeName];
-
-    if (providertype.length > 0) {
-      if (packageTypeName == "flatrate") {
-        packageType += "<input id=" + "\"" + packageTypeName + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + packageTypeName + "\">" + "Stream" + "</label>"
-      } else {
-        packageType += "<input id=" + "\"" + packageTypeName + "\"" + " " + "name=\"state-d\"" + " " + "type" + "=\"radio\"" + " " + "onclick" + "=\"filterProvider(this.id)\"> <label for=" + "\"" + packageTypeName + "\">" + packageTypeName + "</label>"
-      }
-    }
-  }
-  document.querySelector(".switch-toggle").innerHTML = packageType;
-}
-
-function filterProvider(packageType) {
-
-  var providertype = [];
-  providertype = uniquePackages[packageType];
-
-  var images = "";
-  var link = "";
-  var icon = "";
-
-
-  for (var i = 0; i < providertype.length; i++) {
-
-    link = providertype[i].redirect_link
-    icon = providertype[i].package_icon
-    images += "<li class=provider-icon> <a href=" + link + "> <img class=\"channel-img\" src=" + icon + "></li></a>";
-  }
-
-  document.querySelector("#provider-list").innerHTML = images;
-  setTimeout(function () {
-    document.querySelector("#provider-list").classList.remove('pre-animation');
-  }, 100)
-
-}
-
-function PopulateDropDownList(data) {
-  var ddlCustomers = $("#dataList");
-  ddlCustomers.empty();
-  $(data).each(function () {
-    var option = $("<li />");
-    option.html(buildTitleTileHtml(this));
-    option.attr('data-id', this.id);
-    option.attr('data-object', this.object_type);
-    ddlCustomers.append(option);
-  });
-}
-
-$(document).ready(function () {
-  $('input').on('keypress', function (e) {
-    if (e.which === 13) {
-      fetchMatchingCases();
-    }
-  });
-
-  $('input').focusout(function (e) {
-    fetchMatchingCases();
-  });
-
-  function fetchMatchingCases() {
-    var txt = $('input[name="search"]').val();
-    var client = new HttpClient();
-    client.get("https://s.prod.supr.ninja/sw/v2/title?q=" + txt, function (response) {
-      var jsonObj = JSON.parse(response);
-      PopulateDropDownList(jsonObj);
-    }, selectedCountry); // Use selected country for search
-  }
+function route() { const match = location.hash.match(/^#movie\/([^/]+)/); if (match) { try { loadDetails(decodeURIComponent(match[1])); } catch { closeDetails(); } } else if ($('#myModal').open) closeDetails(false); }
+$('#search-form').addEventListener('submit', e => { e.preventDefault(); search(); });
+$('#input').addEventListener('input', () => { clearTimeout(searchTimer); ++searchVersion; cancel('search'); if (!$('#input').value.trim()) resetSearch(); else searchTimer = setTimeout(search,350); });
+$('#country-selector').addEventListener('change', event => changeCountry(event.target.value));
+$('#detail-country-selector').value = country;
+$('#detail-country-selector').addEventListener('change', event => changeCountry(event.target.value));
+$('#reset-search').addEventListener('click',resetSearch);
+$('#close-modal').addEventListener('click',() => closeDetails());
+$('#myModal').addEventListener('cancel',e => { e.preventDefault(); closeDetails(); });
+$('#myModal').addEventListener('click',e => { if(e.target === $('#myModal')) { const r = e.target.getBoundingClientRect(); if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeDetails(); } });
+document.addEventListener('click',e => {
+  const button = e.target.closest('button'); if (!button) return;
+  if (button.dataset.query) { $('#input').value = button.dataset.query; search(); }
+  if (button.dataset.id) navigateTitle(button.dataset.id,button.dataset.title);
+  if (button.dataset.filter) { filter = button.dataset.filter; document.querySelectorAll('[data-filter]').forEach(b => { b.classList.toggle('active',b === button); b.setAttribute('aria-pressed',b === button); }); renderResults(); }
+  if (button.id === 'retry-search') search();
+  if (button.id === 'refresh-discovery' || button.id === 'retry-discovery') loadDiscovery(true);
+  if (button.dataset.retry) loadDetails(button.dataset.retry);
+  if (button.dataset.season) loadDetails(button.dataset.season,true);
+  if (button.dataset.show) loadDetails(currentId);
+  if (button.dataset.provider) renderProviders(button.dataset.provider);
 });
-
-function getUniquePackages(providers) {
-  const uniquePackages = {};
-
-  for (let key in providers) {
-    const seenPackageNames = new Set();
-    uniquePackages[key] = providers[key].filter(pkg => {
-      if (!seenPackageNames.has(pkg.package_name)) {
-        seenPackageNames.add(pkg.package_name);
-        return true;
-      }
-      return false;
-    });
-  }
-
-  return uniquePackages;
+document.addEventListener('error', e => { if (e.target.tagName === 'IMG') { e.target.style.visibility = 'hidden'; } },true);
+window.addEventListener('popstate',route);
+window.addEventListener('hashchange',() => { if (location.hash.startsWith('#movie/') && !$('#myModal').open) route(); });
+if (window.gsap && window.ScrollTrigger && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.from('.hero-title h1',{y:24,opacity:0,duration:.7,ease:'power3.out'});
+  gsap.fromTo('.reveal-copy',{opacity:.15},{opacity:1,scrollTrigger:{trigger:'.manifesto',start:'top 85%',end:'center 70%',scrub:true}});
+  gsap.fromTo('.film-window',{scale:.8},{scale:1,scrollTrigger:{trigger:'.manifesto-bottom',start:'top 95%',end:'top 65%',scrub:true}});
+  gsap.to('.film-window',{opacity:.2,scrollTrigger:{trigger:'.manifesto-bottom',start:'top 30%',end:'bottom top',scrub:true}});
 }
-
-// URL routing functions for shareable links
-function updateURL(movieId, movieTitle) {
-  var cleanTitle = movieTitle.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
-  var newURL = '#movie/' + movieId + '/' + cleanTitle;
-  
-  // Update URL without reloading page
-  history.pushState({ movieId: movieId, title: movieTitle }, movieTitle + ' - Where Can I Watch This?', newURL);
-  
-  // Update page title
-  document.title = movieTitle + ' - Where Can I Watch This?';
-}
-
-function handleURLRouting() {
-  var hash = window.location.hash;
-  
-  if (hash.startsWith('#movie/')) {
-    var parts = hash.split('/');
-    var movieId = parts[1];
-    
-    if (movieId && movieId.trim() !== '') {
-      // Ensure modal element exists before proceeding
-      if (typeof modal === 'undefined' || !modal) {
-        // Retry after a short delay if modal not ready
-        setTimeout(handleURLRouting, 200);
-        return;
-      }
-      
-      // Load movie details from URL
-      fetchMovieDetails(movieId);
-    } else {
-      // Invalid movie ID, go to homepage
-      closeModalAndResetURL();
-    }
-  } else {
-    // No hash or invalid hash - close modal and reset title
-    if (typeof modal !== 'undefined' && modal) {
-      modal.style.display = "none";
-    }
-    document.title = "Where Can I Watch This?";
-    document.querySelector(".headline").innerHTML = "Where can I watch this";
-  }
-}
-
-function closeModalAndResetURL() {
-  if (typeof modal !== 'undefined' && modal) {
-    modal.style.display = "none";
-  }
-  
-  // Reset URL to homepage without hash
-  history.pushState({}, "Where Can I Watch This?", window.location.pathname);
-  document.title = "Where Can I Watch This?";
-  document.querySelector(".headline").innerHTML = "Where can I watch this";
-}
+route();
+loadDiscovery();
