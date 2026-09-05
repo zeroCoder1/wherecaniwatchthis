@@ -1,47 +1,41 @@
 # Where Can I Watch This?
 
-A lightweight web app for searching a movie or TV show and seeing where it is available to stream in supported countries.
+A brutalist movie and TV streaming finder. Built with static HTML, CSS, vanilla JavaScript and progressive GSAP motion; no build step required.
 
-## What It Does
+## Run locally
 
-- Search for a title and view availability details.
-- Switch between countries to see region-specific streaming results.
-- Browse provider options, trailers, seasons, and related titles inside the modal.
-- Share titles with URL-based routing.
-
-## Tech Stack
-
-- HTML
-- CSS
-- Vanilla JavaScript
-- jQuery for DOM helpers and event delegation
-
-## Running Locally
-
-This is a static site, so you can open `index.html` directly in a browser.
-
-For a better local workflow, serve the folder with any static file server, for example:
-
-```bash
-npx serve .
+```sh
+python3 -m http.server 4173
 ```
 
-Then open the local URL printed in the terminal.
+Open http://localhost:4173.
 
-## Project Structure
+## Features
 
-- `index.html` - main page markup and script/style links
-- `css/style.css` - base layout and page styles
-- `css/input.css` - search and input styling
-- `css/modal.css` - modal layout and detail view styles
-- `js/script.js` - search, routing, modal rendering, and API calls
+- Debounced title search, movie/TV filters and live API discovery tiles with an Explore more control.
+- Synchronized homepage and dialog country selectors preserve the active season.
+- Region-specific streaming, rental and purchase links for India, US, UK and Canada.
+- Shareable title URLs, season browsing, trailers and related searches.
+- Native accessible dialog with Escape dismissal, focus restoration and background scroll locking.
+- Immediate skeletons, reserved media dimensions, retained results while refreshing, request cancellation and stale-response guards.
+- Country-keyed five-minute in-memory cache, upstream/browser HTTP cache bypass, 15-second timeouts and in-place retries.
+- Responsive layouts and reduced-motion support. Core functionality works without GSAP.
 
-## Notes
+## Files
 
-- Country selection is persisted in `localStorage`.
-- The app uses remote API data for title details, providers, trailers, and suggestions.
-- Performance is better as a static site than by moving this code to a heavier framework unless the app grows much larger.
+- `index.html`: page and dialog shell.
+- `css/style.css`: responsive design and loading/motion styles.
+- `js/script.js`: API, rendering, request lifecycle and navigation.
+- `css/input.css` and `css/modal.css`: legacy styles, no longer loaded.
 
-## Credits
+Availability uses the existing Supr API. Availability checks the selected country first, then other supported countries if no providers are listed. Alternate-country providers are clearly labeled, including for individual seasons. Failed regional checks are distinguished from confirmed empty results. Fonts, images and optional GSAP scripts load from external services. Discovery uses the API’s empty-query catalog response for the selected country. Titles, posters and release years are supplied by the API; Explore more refreshes that response and rotates through unique titles. Tiles open details directly and do not claim local streaming availability.
 
-Built for the Supr•Design project.
+## Verification
+
+```sh
+node --test tests/*.test.cjs
+node --check js/script.js
+git diff --check
+```
+
+Browser checks cover live title search, details, rental tabs, related titles, season loading and mobile layout. The regional regression was reproduced and verified with Rick and Morty Season 9: no India providers, US fallback providers, and a switch to US that preserves Season 9. Discovery refresh and homepage country changes were also verified. Upstream provider accuracy remains dependent on the API.
